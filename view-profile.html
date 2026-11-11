@@ -1,1 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#e91e63">
+  <title>View Profile | Mubeezi Dating</title>
+  <style>
+    :root{--red:#e91e63;--deep:#c2185b;--pink:#fff0f5;--ink:#29232a;--muted:#77717a;--line:#eee5e9;--white:#fff}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,Helvetica,sans-serif;background:#fffafb;color:var(--ink);line-height:1.55}
+    a{color:inherit;text-decoration:none}
+    .container{width:min(1050px,92%);margin:auto}
+    header{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+    .topbar{min-height:70px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .logo{font-size:23px;font-weight:900;color:var(--red);letter-spacing:-.5px}
+    .logo span{color:var(--ink)}
+    .nav{display:flex;gap:9px;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:25px;padding:11px 19px;font-weight:700;font-size:14px;cursor:pointer;transition:.2s}
+    .btn-primary{background:var(--red);color:#fff}
+    .btn-primary:hover{background:var(--deep)}
+    .btn-outline{background:#fff;border:1px solid var(--red);color:var(--red)}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    main{padding:30px 0 55px}
+    .back{display:inline-block;color:var(--red);font-weight:700;margin-bottom:18px}
+    .status{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px;text-align:center;color:var(--muted)}
+    .profile-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:start}
+    .gallery,.details{background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 8px 28px #4b17300b}
+    .main-photo-wrap{height:490px;background:#f8edf2;display:grid;place-items:center;overflow:hidden}
+    .main-photo{width:100%;height:100%;object-fit:cover;display:block}
+    .photo-placeholder{color:#b8aab1;font-size:58px;font-weight:800}
+    .thumbs{display:flex;gap:10px;padding:12px;overflow-x:auto}
+    .thumb{width:76px;height:76px;flex:0 0 76px;border:2px solid transparent;border-radius:10px;overflow:hidden;padding:0;background:#f8edf2;cursor:pointer}
+    .thumb.active{border-color:var(--red)}
+    .thumb img{width:100%;height:100%;object-fit:cover}
+    .details{padding:25px}
+    .name-line{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+    h1{font-size:29px;line-height:1.2}
+    .verified{font-size:12px;color:#16834b;background:#e9f8ef;border-radius:20px;padding:4px 9px;font-weight:700}
+    .meta{color:var(--muted);margin:9px 0 18px}
+    .bio{font-size:15px;margin:0 0 22px;white-space:pre-wrap}
+    .like-panel{background:var(--pink);border:1px solid #f8d4e2;border-radius:14px;padding:16px;margin:20px 0}
+    .like-panel p{font-size:13px;color:#6e5963;margin-bottom:10px}
+    .like-btn{width:100%;font-size:16px;padding:13px}
+    .like-message{font-size:13px;color:var(--deep);font-weight:700;margin-top:9px;min-height:18px}
+    .section-title{font-size:17px;margin:22px 0 12px}
+    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .info{background:#fffafb;border:1px solid var(--line);border-radius:11px;padding:11px 12px;min-width:0}
+    .info small{display:block;color:var(--muted);font-size:12px;margin-bottom:3px}
+    .info strong{font-size:14px;overflow-wrap:anywhere}
+    .tags{display:flex;gap:8px;flex-wrap:wrap}
+    .tag{background:#fff0f5;border:1px solid #f8d4e2;color:#a81750;padding:6px 10px;border-radius:20px;font-size:13px}
+    footer{background:#261d24;color:#eee;padding:25px 0;text-align:center;font-size:13px}
+    footer a{color:#ffd5e4;margin:0 8px}
+    @media(max-width:760px){.profile-layout{grid-template-columns:1fr;gap:16px}.main-photo-wrap{height:min(115vw,480px)}.details{padding:20px}.topbar{padding:10px 0}.logo{font-size:20px}}
+    @media(max-width:380px){.info-grid{grid-template-columns:1fr}h1{font-size:25px}.btn{padding:10px 14px}}
+  </style>
+</head>
+<body>
+<header>
+  <div class="container topbar">
+    <a class="logo" href="home.html">MUBEEZI <span>DATING</span></a>
+    <nav class="nav" aria-label="Main navigation">
+      <a class="btn btn-outline" href="home.html">Home</a>
+      <a class="btn btn-outline" href="discover.html">Discover</a>
+      <a class="btn btn-primary" href="login.html">Login</a>
+    </nav>
+  </div>
+</header>
 
+<main class="container">
+  <a class="back" href="javascript:history.back()">← Back to profiles</a>
+  <div id="pageStatus" class="status">Loading profile…</div>
+
+  <section id="profileContent" class="profile-layout" hidden>
+    <div class="gallery">
+      <div class="main-photo-wrap" id="mainPhotoWrap">
+        <div class="photo-placeholder">M</div>
+      </div>
+      <div class="thumbs" id="photoThumbs" aria-label="More profile photos"></div>
+    </div>
+
+    <article class="details">
+      <div class="name-line">
+        <h1 id="profileName">Member</h1>
+        <span id="verifiedBadge" class="verified" hidden>✓ Verified</span>
+      </div>
+      <p class="meta" id="profileMeta"></p>
+      <p class="bio" id="profileBio"></p>
+
+      <div class="like-panel">
+        <p>Interested in this person? Let them know you would like to connect.</p>
+        <button class="btn btn-primary like-btn" id="likeButton" type="button">♥ Like this profile</button>
+        <div class="like-message" id="likeMessage" aria-live="polite"></div>
+      </div>
+
+      <h2 class="section-title">About this person</h2>
+      <div class="info-grid" id="aboutGrid"></div>
+
+      <h2 class="section-title" id="interestsTitle" hidden>Interests</h2>
+      <div class="tags" id="interestTags"></div>
+    </article>
+  </section>
+</main>
+
+<footer>
+  <div class="container">
+    <div>© <span id="year"></span> Mubeezi Dating · Connecting Hearts Worldwide</div>
+    <p style="margin-top:9px">
+      <a href="about.html">About</a>
+      <a href="contact.html">Contact</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+    </p>
+  </div>
+</footer>
+
+<script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+  const SUPABASE_URL = "https://xxtlcdvuiyrdufzvzeob.supabase.co";
+  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU";
+  const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+  const $ = (id) => document.getElementById(id);
+  $("year").textContent = new Date().getFullYear();
+
+  const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, ch => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  })[ch]);
+
+  function toList(value) {
+    if (Array.isArray(value)) return value.filter(Boolean).map(String);
+    if (typeof value === "string" && value.trim()) {
+      try {
+        const parsed = JSON.parse(value);
+        if (Array.isArray(parsed)) return parsed.filter(Boolean).map(String);
+      } catch {}
+      return value.split(",").map(v => v.trim()).filter(Boolean);
+    }
+    return [];
+  }
+
+  function addInfo(label, value) {
+    if (value === null || value === undefined || value === "") return;
+    const item = document.createElement("div");
+    item.className = "info";
+    const small = document.createElement("small");
+    small.textContent = label;
+    const strong = document.createElement("strong");
+    strong.textContent = Array.isArray(value) ? value.join(", ") : String(value);
+    item.append(small, strong);
+    $("aboutGrid").appendChild(item);
+  }
+
+  function displayPhotos(profile) {
+    const photos = [];
+    if (profile.profile_photo) photos.push(profile.profile_photo);
+    for (const photo of toList(profile.photos)) {
+      if (photo && !photos.includes(photo)) photos.push(photo);
+    }
+
+    const wrap = $("mainPhotoWrap");
+    const thumbs = $("photoThumbs");
+    wrap.innerHTML = "";
+    thumbs.innerHTML = "";
+
+    if (!photos.length) {
+      const fallback = document.createElement("div");
+      fallback.className = "photo-placeholder";
+      fallback.textContent = (profile.display_name || profile.full_name || "M").charAt(0).toUpperCase();
+      wrap.appendChild(fallback);
+      return;
+    }
+
+    const showPhoto = (url) => {
+      wrap.innerHTML = "";
+      const img = document.createElement("img");
+      img.className = "main-photo";
+      img.alt = "Profile photo";
+      img.src = url;
+      img.onerror = () => {
+        wrap.innerHTML = '<div class="photo-placeholder">Photo unavailable</div>';
+      };
+      wrap.appendChild(img);
+      [...thumbs.children].forEach(button => button.classList.toggle("active", button.dataset.url === url));
+    };
+
+    photos.forEach((url, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "thumb" + (index === 0 ? " active" : "");
+      button.dataset.url = url;
+      button.setAttribute("aria-label", "View photo " + (index + 1));
+      const img = document.createElement("img");
+      img.src = url;
+      img.alt = "";
+      img.onerror = () => button.remove();
+      button.appendChild(img);
+      button.addEventListener("click", () => showPhoto(url));
+      thumbs.appendChild(button);
+    });
+    showPhoto(photos[0]);
+  }
+
+  function renderProfile(profile) {
+    const name = profile.display_name || profile.full_name || profile.username || "Mubeezi member";
+    $("profileName").textContent = name;
+    $("profileMeta").textContent = [profile.age ? profile.age + " years old" : "", profile.gender || "", profile.country || ""].filter(Boolean).join(" · ");
+    $("profileBio").textContent = profile.bio || "This member hasn't added a bio yet.";
+    $("verifiedBadge").hidden = !profile.is_verified;
+
+    $("aboutGrid").innerHTML = "";
+    addInfo("Occupation", profile.occupation);
+    addInfo("Education", profile.education);
+    addInfo("Relationship goal", profile.relationship_goal);
+    addInfo("Interested in", profile.interested_in);
+    addInfo("Country", profile.country);
+    addInfo("Member since", profile.created_at ? new Date(profile.created_at).toLocaleDateString() : "");
+
+    const interests = toList(profile.interests);
+    $("interestTags").innerHTML = "";
+    $("interestsTitle").hidden = interests.length === 0;
+    interests.forEach(value => {
+      const tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = value;
+      $("interestTags").appendChild(tag);
+    });
+
+    displayPhotos(profile);
+    $("profileContent").hidden = false;
+    $("pageStatus").hidden = true;
+  }
+
+  async function setupLike(profileId) {
+    const button = $("likeButton");
+    const message = $("likeMessage");
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      button.textContent = "Login to like this profile";
+      button.addEventListener("click", () => {
+        location.href = "login.html?next=" + encodeURIComponent(location.pathname + location.search);
+      });
+      return;
+    }
+
+    if (user.id === profileId) {
+      button.disabled = true;
+      button.textContent = "This is your profile";
+      return;
+    }
+
+    const { data: existing, error: lookupError } = await supabase
+      .from("profile_likes")
+      .select("id")
+      .eq("liker_id", user.id)
+      .eq("liked_id", profileId)
+      .maybeSingle();
+
+    if (!lookupError && existing) {
+      button.textContent = "♥ Liked";
+      button.disabled = true;
+      message.textContent = "You've already shown interest in this member.";
+      return;
+    }
+
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      button.textContent = "Sending…";
+      message.textContent = "";
+      const { error } = await supabase.from("profile_likes").insert({
+        liker_id: user.id,
+        liked_id: profileId
+      });
+
+      if (error) {
+        console.error("Like error:", error);
+        button.disabled = false;
+        button.textContent = "♥ Like this profile";
+        message.textContent = error.code === "23505"
+          ? "You've already liked this member."
+          : "Couldn't send your like. Please try again.";
+        return;
+      }
+
+      button.textContent = "♥ Liked";
+      message.textContent = "Interest sent! This member can now see your like.";
+    });
+  }
+
+  async function loadProfile() {
+    const profileId = new URLSearchParams(location.search).get("id");
+    if (!profileId) {
+      $("pageStatus").textContent = "No profile was selected. Return to the homepage and select a member.";
+      return;
+    }
+
+    const { data: profile, error } = await supabase
+      .from("discoverable_profiles")
+      .select("*")
+      .eq("id", profileId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Profile loading error:", error);
+      $("pageStatus").textContent = "We couldn't load this profile. Please check that the discoverable_profiles view is available to signed-in members.";
+      return;
+    }
+    if (!profile) {
+      $("pageStatus").textContent = "This profile is unavailable or is no longer visible.";
+      return;
+    }
+
+    renderProfile(profile);
+    await setupLike(profile.id);
+  }
+
+  loadProfile().catch(error => {
+    console.error(error);
+    $("pageStatus").textContent = "Something went wrong while loading this profile. Please refresh and try again.";
+  });
+</script>
+</body>
+</html>

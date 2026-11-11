@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -13,11 +12,14 @@
     body{font-family:Arial,Helvetica,sans-serif;color:var(--dark);background:#fff;line-height:1.5}
     a{text-decoration:none;color:inherit}
     .container{width:min(1120px,92%);margin:auto}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
     header{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 3px 15px #00000008}
     .topbar{min-height:76px;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 0;flex-wrap:wrap}
     .logo{font-size:24px;font-weight:900;color:var(--red);letter-spacing:-.7px}
     .logo span{color:var(--dark)}
-    .top-buttons{display:flex;gap:9px;flex-wrap:wrap}
+    .top-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+    .country-filter{min-width:190px;padding:10px 13px;border:1px solid var(--line);border-radius:24px;background:#fff;color:var(--dark);font-size:14px}
+    .top-buttons{display:flex;gap:9px;flex-wrap:wrap}.top-buttons[hidden]{display:none}
     .btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 19px;border-radius:24px;font-size:14px;font-weight:700;border:1px solid var(--red);transition:.2s}
     .btn:hover{transform:translateY(-1px)}
     .btn-outline{color:var(--red);background:#fff}
@@ -26,7 +28,7 @@
     .section-title{text-align:center;margin:0 auto 25px}
     .section-title h1{font-size:clamp(25px,4vw,36px);margin-bottom:5px}
     .section-title p{color:var(--muted);font-size:15px}
-    .profile-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
+    .profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
     .profile-card{overflow:hidden;border:1px solid var(--line);border-radius:17px;background:#fff;box-shadow:0 7px 24px #54152a0d}
     .profile-photo{height:260px;background:var(--pink);display:flex;align-items:center;justify-content:center;overflow:hidden}
     .profile-photo img{width:100%;height:100%;object-fit:cover;display:block}
@@ -45,19 +47,36 @@
     .footer-links a{font-size:13px;color:#f4e9ed}
     .footer-links a:hover{color:#ff9bb1}
     .copyright{border-top:1px solid #ffffff24;padding-top:15px;text-align:center;color:#cfc4ca;font-size:12px}
-    @media(max-width:850px){.profile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.profile-photo{height:250px}}
-    @media(max-width:480px){.topbar{justify-content:center}.logo{width:100%;text-align:center}.top-buttons{width:100%;justify-content:center}.btn{padding:9px 15px}.profile-grid{gap:12px}.profile-photo{height:190px}.profile-info{padding:12px 9px}.profile-info h2{font-size:16px}}
+    .intro-backdrop{position:fixed;inset:0;z-index:30;background:#171117b8;display:none;align-items:center;justify-content:center;padding:18px}
+    .intro-backdrop.open{display:flex}
+    .intro-panel{width:min(620px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:20px;padding:26px;box-shadow:0 20px 70px #0005}
+    .intro-panel h2{font-size:25px;margin-bottom:7px;color:var(--red)}
+    .intro-panel>p{color:var(--muted);font-size:14px;margin-bottom:18px}
+    .intro-steps{display:grid;gap:10px;margin:18px 0 22px}
+    .intro-step{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fffafb}
+    .intro-step-number{flex:0 0 28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--pink);color:var(--red);font-weight:800}
+    .intro-step strong{display:block;font-size:14px;margin-bottom:2px}
+    .intro-step span{font-size:13px;color:var(--muted)}
+    .intro-actions{display:flex;gap:10px;flex-wrap:wrap}
+    .intro-actions .btn{flex:1}
+    @media(max-width:600px){.topbar{justify-content:center}.logo{width:100%;text-align:center}.top-actions{width:100%;justify-content:center}.country-filter{width:100%}.top-buttons{width:100%;justify-content:center}.btn{padding:9px 15px}.profile-grid{gap:12px}.profile-photo{height:190px}.profile-info{padding:12px 9px}.profile-info h2{font-size:16px}.intro-panel{padding:20px}}
   </style>
 </head>
 <body>
   <header>
     <div class="container topbar">
       <a class="logo" href="home.html">Mubeezi<span>Dating</span></a>
-      <nav class="top-buttons" aria-label="Main navigation">
-        <a class="btn btn-outline" href="discover.html">Discover</a>
-        <a class="btn btn-outline" href="login.html">Login</a>
-        <a class="btn btn-primary" href="register.html">Join</a>
-      </nav>
+      <div class="top-actions">
+        <label class="sr-only" for="countryFilter">Filter profiles by country</label>
+        <select class="country-filter" id="countryFilter" aria-label="Filter profiles by country">
+          <option value="">All countries</option>
+        </select>
+        <nav class="top-buttons" aria-label="Member navigation" id="memberNavigation">
+          <a class="btn btn-outline" href="discover.html">Discover</a>
+          <a class="btn btn-outline" href="login.html">Login</a>
+          <a class="btn btn-primary" href="register.html">Join</a>
+        </nav>
+      </div>
     </div>
   </header>
 
@@ -65,7 +84,7 @@
     <section class="container" aria-label="Member profiles">
       <div class="section-title">
         <h1>Member Profiles</h1>
-        <p>Discover people from around the world.</p>
+        <p>Browse member profiles worldwide. Choose a country to see members from that country.</p>
       </div>
       <div class="profile-grid" id="featuredProfiles">
         <p id="loadingMessage" style="grid-column:1/-1;text-align:center;color:#777;padding:24px">Loading member profiles...</p>
@@ -73,6 +92,25 @@
       <p id="profilesStatus" aria-live="polite"></p>
     </section>
   </main>
+
+
+  <section class="intro-backdrop" id="firstVisitIntro" role="dialog" aria-modal="true" aria-labelledby="introTitle">
+    <div class="intro-panel">
+      <h2 id="introTitle">Welcome to Mubeezi Dating</h2>
+      <p>Create your profile in five simple steps. Sign in first so your answers and photos can be saved securely to your Mubeezi account.</p>
+      <div class="intro-steps">
+        <div class="intro-step"><span class="intro-step-number">1</span><div><strong>About you</strong><span>Age/date of birth, country, gender and religion.</span></div></div>
+        <div class="intro-step"><span class="intro-step-number">2</span><div><strong>Your lifestyle</strong><span>Whether you drink or smoke.</span></div></div>
+        <div class="intro-step"><span class="intro-step-number">3</span><div><strong>Who you want to meet</strong><span>Preferred gender, relationship type and age range.</span></div></div>
+        <div class="intro-step"><span class="intro-step-number">4</span><div><strong>Skin tone preferences</strong><span>Your skin tone and preferred skin tone.</span></div></div>
+        <div class="intro-step"><span class="intro-step-number">5</span><div><strong>Your photos</strong><span>Upload a profile photo and a full photo.</span></div></div>
+      </div>
+      <div class="intro-actions">
+        <a class="btn btn-primary" href="complete-profile.html">Start profile steps</a>
+        <button class="btn btn-outline" type="button" id="closeIntro">Explore first</button>
+      </div>
+    </div>
+  </section>
 
   <footer>
     <div class="container">
@@ -102,7 +140,39 @@
     const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
     const grid = document.getElementById("featuredProfiles");
     const status = document.getElementById("profilesStatus");
+    const countryFilter = document.getElementById("countryFilter");
+    const intro = document.getElementById("firstVisitIntro");
     document.getElementById("currentYear").textContent = new Date().getFullYear();
+
+    // Populate the country dropdown independently of the profiles returned by Supabase.
+    const countryCodes = "AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW".split(" ");
+    const countryNames = new Intl.DisplayNames(["en"], { type: "region" });
+    countryCodes.map(code => ({ code, name: countryNames.of(code) }))
+      .filter(item => item.name && item.name !== item.code)
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .forEach(item => {
+        const option = document.createElement("option");
+        option.value = item.name;
+        option.textContent = item.name;
+        countryFilter.appendChild(option);
+      });
+
+    const memberNavigation = document.getElementById("memberNavigation");
+    const closeIntroButton = document.getElementById("closeIntro");
+
+    if (closeIntroButton && intro) {
+      closeIntroButton.addEventListener("click", () => {
+        localStorage.setItem("mubeezi_intro_seen", "yes");
+        intro.classList.remove("open");
+      });
+    }
+    if (intro) {
+      const startProfileLink = intro.querySelector('a[href="complete-profile.html"]');
+      if (startProfileLink) startProfileLink.addEventListener("click", () => {
+        localStorage.setItem("mubeezi_intro_seen", "yes");
+      });
+    }
+    countryFilter.addEventListener("change", loadProfiles);
 
     function escapeHtml(value = "") {
       return String(value).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;", "'":"&#039;"}[c]));
@@ -113,41 +183,102 @@
       const photo = profile.profile_photo;
       const age = profile.age ? `, ${profile.age}` : "";
       const country = profile.country || "";
+      const initial = escapeHtml(name.charAt(0).toUpperCase());
+      const photoMarkup = photo
+        ? `<img src="${escapeHtml(photo)}" alt="${escapeHtml(name)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='grid';"><div class="placeholder" style="display:none">${initial}</div>`
+        : `<div class="placeholder">${initial}</div>`;
       return `<article class="profile-card">
-        <div class="profile-photo">${photo ? `<img src="${escapeHtml(photo)}" alt="${escapeHtml(name)}" loading="lazy">` : `<div class="placeholder">${escapeHtml(name.charAt(0).toUpperCase())}</div>`}</div>
+        <div class="profile-photo">${photoMarkup}</div>
         <div class="profile-info"><h2>${escapeHtml(name + age)}</h2><p>${escapeHtml(country)}</p><a class="btn btn-outline" href="view-profile.html?id=${encodeURIComponent(profile.id)}">View Profile</a></div>
       </article>`;
     }
 
     async function loadProfiles() {
-      status.textContent = "Loading profiles...";
-      const { data, error } = await supabase.from("profiles")
-        .select("id,display_name,full_name,age,country,profile_photo,created_at")
-        .eq("profile_visible", true)
-        .eq("is_active", true)
-        .eq("profile_completed", true)
-        .order("created_at", { ascending: false })
-        .limit(8);
+      status.textContent = "Loading all member profiles...";
+      grid.innerHTML = "";
 
-      if (error) {
-        console.error("Mubeezi profile loading error:", error);
-        grid.innerHTML = "";
-        status.textContent = "Member profiles could not be loaded. Check the profiles table permissions and column names in Supabase.";
+      // Fetch in pages so the homepage is not restricted to only four profiles.
+      // Supabase commonly caps a single response, so request successive ranges.
+      const pageSize = 500;
+      let offset = 0;
+      let allProfiles = [];
+
+      while (true) {
+        let profileQuery = supabase.from("profiles")
+          .select("id,display_name,full_name,age,country,profile_photo,created_at")
+          .eq("profile_visible", true)
+          .eq("is_active", true)
+          .eq("profile_completed", true)
+          .order("created_at", { ascending: false })
+          .range(offset, offset + pageSize - 1);
+
+        // If a country is selected, return every visible profile matching that country.
+        if (countryFilter.value) profileQuery = profileQuery.eq("country", countryFilter.value);
+
+        const { data, error } = await profileQuery;
+        if (error) {
+          console.error("Mubeezi profile loading error:", error);
+          grid.innerHTML = "";
+          status.textContent = "Member profiles could not be loaded. Check the profiles table permissions and column names in Supabase.";
+          return;
+        }
+
+        const page = data || [];
+        allProfiles = allProfiles.concat(page);
+        if (page.length < pageSize) break;
+        offset += pageSize;
+      }
+
+      if (allProfiles.length === 0) {
+        status.textContent = countryFilter.value
+          ? `No visible member profiles from ${countryFilter.value} yet.`
+          : "No completed member profiles are available to display yet.";
         return;
       }
-      if (!data || data.length === 0) {
-        grid.innerHTML = "";
-        status.textContent = "No completed member profiles are available to display yet.";
-        return;
-      }
-      grid.innerHTML = data.map(makeCard).join("");
-      status.textContent = "";
+
+      grid.innerHTML = allProfiles.map(makeCard).join("");
+      status.textContent = `${allProfiles.length} member profile${allProfiles.length === 1 ? "" : "s"} shown.`;
     }
 
-    loadProfiles().catch(error => {
-      console.error(error);
+    async function initializeHomepage() {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) console.warn("Could not read sign-in session:", sessionError);
+
+      if (session) {
+        // Hide registration/login/discover navigation once the visitor is signed in.
+        if (memberNavigation) memberNavigation.hidden = true;
+
+        // A signed-in member who has not finished onboarding should complete their profile.
+        const { data: ownProfile, error: ownProfileError } = await supabase
+          .from("profiles")
+          .select("onboarding_completed,profile_completed")
+          .eq("id", session.user.id)
+          .maybeSingle();
+
+        if (!ownProfileError && ownProfile &&
+            ownProfile.onboarding_completed !== true &&
+            ownProfile.profile_completed !== true) {
+          window.location.replace("complete-profile.html");
+          return;
+        }
+
+        // Do not show the first-visitor introduction again to registered members.
+        if (intro) intro.classList.remove("open");
+        localStorage.setItem("mubeezi_intro_seen", "yes");
+      } else {
+        // Show the introduction only to a first-time visitor on this browser.
+        if (intro && !localStorage.getItem("mubeezi_intro_seen")) {
+          intro.classList.add("open");
+        }
+      }
+
+      await loadProfiles();
+    }
+
+    initializeHomepage().catch(error => {
+      console.error("Mubeezi homepage initialization error:", error);
       grid.innerHTML = "";
-      status.textContent = "Something went wrong while loading member profiles. Please refresh the page.";
+      status.textContent = "Something went wrong while loading the homepage. Please refresh the page.";
     });
   </script>
 </body>

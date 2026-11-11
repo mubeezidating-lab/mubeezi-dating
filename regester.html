@@ -1,1 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#e91e63">
+  <title>Create Account | Mubeezi Dating</title>
+  <style>
+    :root{--pink:#e91e63;--red:#d71945;--ink:#29232a;--muted:#746b73;--line:#eadfe5;--bg:#fff7fa}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;font-family:Arial,Helvetica,sans-serif;color:var(--ink);background:linear-gradient(135deg,#fff7fa,#ffe7ef);display:flex;align-items:center;justify-content:center;padding:24px}
+    .shell{width:100%;max-width:460px}
+    .brand{text-align:center;margin-bottom:20px}
+    .brand-mark{width:58px;height:58px;margin:0 auto 10px;border-radius:18px;background:linear-gradient(135deg,var(--red),var(--pink));display:grid;place-items:center;color:#fff;font-size:29px;box-shadow:0 10px 25px #e91e6333}
+    .brand h1{font-size:25px;letter-spacing:1.4px;margin:0;color:var(--red)}
+    .brand p{margin:7px 0 0;color:var(--muted);font-size:14px}
+    .panel{background:#fff;border:1px solid #f4dce6;border-radius:22px;padding:30px;box-shadow:0 18px 55px #8d34521a}
+    h2{margin:0 0 7px;font-size:24px}
+    .intro{margin:0 0 23px;color:var(--muted);font-size:14px;line-height:1.5}
+    label{display:block;font-size:13px;font-weight:700;margin:15px 0 7px}
+    input[type=email],input[type=password],input[type=text]{width:100%;height:48px;border:1px solid var(--line);border-radius:11px;padding:0 13px;font-size:15px;outline:none;background:#fff}
+    input:focus{border-color:var(--pink);box-shadow:0 0 0 3px #e91e6317}
+    .password-wrap{position:relative}
+    .password-wrap input{padding-right:78px}
+    .toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--pink);font-weight:700;cursor:pointer}
+    .hint{font-size:12px;color:var(--muted);margin:7px 0 0;line-height:1.45}
+    .terms{display:flex;gap:9px;align-items:flex-start;margin:18px 0;color:var(--muted);font-size:12px;line-height:1.5}
+    .terms input{margin-top:2px;accent-color:var(--pink)}
+    a{color:var(--pink);text-decoration:none;font-weight:700}
+    a:hover{text-decoration:underline}
+    .submit{width:100%;height:49px;border:0;border-radius:12px;background:linear-gradient(90deg,var(--red),var(--pink));color:#fff;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 8px 18px #e91e6330}
+    .submit:disabled{opacity:.65;cursor:wait}
+    .message{display:none;margin-top:15px;padding:12px;border-radius:10px;font-size:13px;line-height:1.5}
+    .message.error{display:block;background:#fff0f1;color:#a4142d;border:1px solid #ffd2d9}
+    .message.success{display:block;background:#effaf3;color:#176b37;border:1px solid #c9efd5}
+    .bottom{text-align:center;margin:19px 0 0;color:var(--muted);font-size:14px}
+    .legal{text-align:center;color:#887d85;font-size:11px;margin:18px 0 0;line-height:1.5}
+    @media(max-width:480px){body{padding:16px}.panel{padding:23px 20px;border-radius:18px}.brand h1{font-size:22px}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="brand">
+      <div class="brand-mark" aria-hidden="true">♥</div>
+      <h1>MUBEEZI DATING</h1>
+      <p>Connecting Hearts Worldwide</p>
+    </header>
 
+    <section class="panel">
+      <h2>Create your account</h2>
+      <p class="intro">Join Mubeezi Dating and start connecting with people around the world. You must be 18 or older to register.</p>
+
+      <form id="registerForm">
+        <label for="email">Email address</label>
+        <input id="email" name="email" type="email" placeholder="you@example.com" autocomplete="email" required>
+
+        <label for="password">Create password</label>
+        <div class="password-wrap">
+          <input id="password" name="password" type="password" placeholder="At least 8 characters" autocomplete="new-password" minlength="8" required>
+          <button class="toggle" type="button" data-target="password">Show</button>
+        </div>
+        <p class="hint">Use at least 8 characters. Choose a password you do not use on other websites.</p>
+
+        <label for="confirmPassword">Confirm password</label>
+        <div class="password-wrap">
+          <input id="confirmPassword" name="confirmPassword" type="password" placeholder="Enter your password again" autocomplete="new-password" minlength="8" required>
+          <button class="toggle" type="button" data-target="confirmPassword">Show</button>
+        </div>
+
+        <label class="terms">
+          <input id="terms" type="checkbox" required>
+          <span>I agree to the <a href="terms.html" target="_blank" rel="noopener">Terms and Conditions</a> and <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>. I confirm that I am at least 18 years old.</span>
+        </label>
+
+        <button class="submit" id="submitButton" type="submit">Create account</button>
+        <div id="message" class="message" role="status" aria-live="polite"></div>
+      </form>
+
+      <p class="bottom">Already have an account? <a href="login.html">Log in</a></p>
+    </section>
+    <p class="legal">Please use your own email address. You may need to confirm your email before signing in.</p>
+  </main>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    const SUPABASE_URL = "https://xxtlcdvuiyrdufzvzeob.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU";
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const form = document.getElementById("registerForm");
+    const button = document.getElementById("submitButton");
+    const message = document.getElementById("message");
+
+    document.querySelectorAll(".toggle").forEach(toggle => {
+      toggle.addEventListener("click", () => {
+        const field = document.getElementById(toggle.dataset.target);
+        const reveal = field.type === "password";
+        field.type = reveal ? "text" : "password";
+        toggle.textContent = reveal ? "Hide" : "Show";
+      });
+    });
+
+    function showMessage(text, type) {
+      message.textContent = text;
+      message.className = "message " + type;
+    }
+
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      message.className = "message";
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      const confirmPassword = document.getElementById("confirmPassword").value;
+
+      if (password.length < 8) {
+        showMessage("Your password must contain at least 8 characters.", "error");
+        return;
+      }
+      if (password !== confirmPassword) {
+        showMessage("The passwords do not match. Please check them.", "error");
+        return;
+      }
+      if (!document.getElementById("terms").checked) {
+        showMessage("Please agree to the Terms and confirm that you are at least 18.", "error");
+        return;
+      }
+
+      button.disabled = true;
+      button.textContent = "Creating account…";
+
+      try {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: window.location.origin + "/login.html",
+            data: { registration_method: "email" }
+          }
+        });
+        if (error) throw error;
+
+        if (data.session) {
+          window.location.href = "complete-profile.html";
+          return;
+        }
+
+        showMessage("Your account has been created. Check your email and click the confirmation link. After confirming, return here to log in and complete your profile.", "success");
+        form.reset();
+      } catch (error) {
+        showMessage(error.message || "We could not create your account. Please try again.", "error");
+      } finally {
+        button.disabled = false;
+        button.textContent = "Create account";
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,1 +1,154 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#d71945">
+  <meta name="description" content="Discover member profiles on Mubeezi Dating.">
+  <title>Mubeezi Dating | Connecting Hearts Worldwide</title>
+  <style>
+    :root{--red:#d71945;--dark:#29242a;--pink:#fff1f4;--muted:#77727b;--line:#f0e2e6}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,Helvetica,sans-serif;color:var(--dark);background:#fff;line-height:1.5}
+    a{text-decoration:none;color:inherit}
+    .container{width:min(1120px,92%);margin:auto}
+    header{position:sticky;top:0;z-index:10;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 3px 15px #00000008}
+    .topbar{min-height:76px;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 0;flex-wrap:wrap}
+    .logo{font-size:24px;font-weight:900;color:var(--red);letter-spacing:-.7px}
+    .logo span{color:var(--dark)}
+    .top-buttons{display:flex;gap:9px;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 19px;border-radius:24px;font-size:14px;font-weight:700;border:1px solid var(--red);transition:.2s}
+    .btn:hover{transform:translateY(-1px)}
+    .btn-outline{color:var(--red);background:#fff}
+    .btn-primary{color:#fff;background:var(--red)}
+    main{min-height:55vh;padding:34px 0 52px}
+    .section-title{text-align:center;margin:0 auto 25px}
+    .section-title h1{font-size:clamp(25px,4vw,36px);margin-bottom:5px}
+    .section-title p{color:var(--muted);font-size:15px}
+    .profile-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
+    .profile-card{overflow:hidden;border:1px solid var(--line);border-radius:17px;background:#fff;box-shadow:0 7px 24px #54152a0d}
+    .profile-photo{height:260px;background:var(--pink);display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .profile-photo img{width:100%;height:100%;object-fit:cover;display:block}
+    .placeholder{font-size:58px;font-weight:800;color:var(--red)}
+    .profile-info{padding:15px;text-align:center}
+    .profile-info h2{font-size:18px;margin-bottom:3px}
+    .profile-info p{font-size:14px;color:var(--muted);margin-bottom:12px}
+    .profile-info .btn{width:100%;padding:9px 12px}
+    #profilesStatus{text-align:center;color:var(--muted);padding:24px 8px;font-size:14px}
+    footer{background:#211d22;color:#fff;padding:30px 0 18px;margin-top:10px}
+    .footer-top{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;padding-bottom:22px}
+    .footer-brand{max-width:390px}
+    .footer-brand .logo span{color:#fff}
+    .footer-brand p{color:#d5cbd0;font-size:14px;margin-top:9px}
+    .footer-links{display:flex;gap:15px 22px;flex-wrap:wrap;align-items:center}
+    .footer-links a{font-size:13px;color:#f4e9ed}
+    .footer-links a:hover{color:#ff9bb1}
+    .copyright{border-top:1px solid #ffffff24;padding-top:15px;text-align:center;color:#cfc4ca;font-size:12px}
+    @media(max-width:850px){.profile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.profile-photo{height:250px}}
+    @media(max-width:480px){.topbar{justify-content:center}.logo{width:100%;text-align:center}.top-buttons{width:100%;justify-content:center}.btn{padding:9px 15px}.profile-grid{gap:12px}.profile-photo{height:190px}.profile-info{padding:12px 9px}.profile-info h2{font-size:16px}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container topbar">
+      <a class="logo" href="home.html">Mubeezi<span>Dating</span></a>
+      <nav class="top-buttons" aria-label="Main navigation">
+        <a class="btn btn-outline" href="discover.html">Discover</a>
+        <a class="btn btn-outline" href="login.html">Login</a>
+        <a class="btn btn-primary" href="register.html">Join</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="container" aria-label="Member profiles">
+      <div class="section-title">
+        <h1>Member Profiles</h1>
+        <p>Discover people from around the world.</p>
+      </div>
+      <div class="profile-grid" id="featuredProfiles">
+        <p id="loadingMessage" style="grid-column:1/-1;text-align:center;color:#777;padding:24px">Loading member profiles...</p>
+      </div>
+      <p id="profilesStatus" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <a class="logo" href="home.html">Mubeezi<span>Dating</span></a>
+          <p>Connecting Hearts Worldwide. Discover people and build meaningful connections.</p>
+        </div>
+        <nav class="footer-links" aria-label="Footer navigation">
+          <a href="about.html">About Us</a>
+          <a href="contact.html">Contact</a>
+          <a href="privacy.html">Privacy Policy</a>
+          <a href="terms.html">Terms &amp; Conditions</a>
+          <a href="guidelines.html">Community Guidelines</a>
+          <a href="support.html">Help &amp; Support</a>
+        </nav>
+      </div>
+      <div class="copyright">&copy; <span id="currentYear"></span> Mubeezi Dating. All rights reserved. Connecting Hearts Worldwide.</div>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    const SUPABASE_URL = "https://xxtlcdvuiyrdufzvzeob.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU";
+    const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    const grid = document.getElementById("featuredProfiles");
+    const status = document.getElementById("profilesStatus");
+    document.getElementById("currentYear").textContent = new Date().getFullYear();
+
+    function escapeHtml(value = "") {
+      return String(value).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;", "'":"&#039;"}[c]));
+    }
+
+    function makeCard(profile) {
+      const name = profile.display_name || profile.full_name || "Mubeezi Member";
+      const photo = profile.profile_photo;
+      const age = profile.age ? `, ${profile.age}` : "";
+      const country = profile.country || "";
+      return `<article class="profile-card">
+        <div class="profile-photo">${photo ? `<img src="${escapeHtml(photo)}" alt="${escapeHtml(name)}" loading="lazy">` : `<div class="placeholder">${escapeHtml(name.charAt(0).toUpperCase())}</div>`}</div>
+        <div class="profile-info"><h2>${escapeHtml(name + age)}</h2><p>${escapeHtml(country)}</p><a class="btn btn-outline" href="view-profile.html?id=${encodeURIComponent(profile.id)}">View Profile</a></div>
+      </article>`;
+    }
+
+    async function loadProfiles() {
+      status.textContent = "Loading profiles...";
+      const { data, error } = await supabase.from("profiles")
+        .select("id,display_name,full_name,age,country,profile_photo,created_at")
+        .eq("profile_visible", true)
+        .eq("is_active", true)
+        .eq("profile_completed", true)
+        .order("created_at", { ascending: false })
+        .limit(8);
+
+      if (error) {
+        console.error("Mubeezi profile loading error:", error);
+        grid.innerHTML = "";
+        status.textContent = "Member profiles could not be loaded. Check the profiles table permissions and column names in Supabase.";
+        return;
+      }
+      if (!data || data.length === 0) {
+        grid.innerHTML = "";
+        status.textContent = "No completed member profiles are available to display yet.";
+        return;
+      }
+      grid.innerHTML = data.map(makeCard).join("");
+      status.textContent = "";
+    }
+
+    loadProfiles().catch(error => {
+      console.error(error);
+      grid.innerHTML = "";
+      status.textContent = "Something went wrong while loading member profiles. Please refresh the page.";
+    });
+  </script>
+</body>
+</html>

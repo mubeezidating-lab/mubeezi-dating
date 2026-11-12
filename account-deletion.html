@@ -1,1 +1,495 @@
 
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Delete Account | Mubeezi Dating</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #fff5f7;
+      color: #333;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #e91e63;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 25px;
+      margin-bottom: 5px;
+    }
+
+    header p {
+      font-size: 13px;
+    }
+
+    .container {
+      width: 92%;
+      max-width: 650px;
+      margin: 30px auto;
+    }
+
+    .card {
+      background: white;
+      padding: 25px;
+      border-radius: 14px;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.07);
+      margin-bottom: 20px;
+    }
+
+    h2 {
+      color: #d81b60;
+      margin-bottom: 15px;
+    }
+
+    .warning {
+      background: #fff0f0;
+      border: 1px solid #ffcaca;
+      border-left: 5px solid #d32f2f;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    .info {
+      background: #fff5f8;
+      border: 1px solid #f8bbd0;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 15px 0;
+      line-height: 1.6;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin: 16px 0 7px;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 7px;
+      font-size: 15px;
+      outline: none;
+    }
+
+    input:focus, textarea:focus {
+      border-color: #e91e63;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 90px;
+    }
+
+    .confirm-check {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin: 18px 0;
+      line-height: 1.5;
+      font-weight: normal;
+    }
+
+    .confirm-check input {
+      width: auto;
+      margin-top: 4px;
+    }
+
+    button {
+      width: 100%;
+      border: none;
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 12px;
+    }
+
+    .delete-btn {
+      background: #d32f2f;
+      color: white;
+    }
+
+    .delete-btn:hover {
+      background: #b71c1c;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .secondary-btn {
+      background: #fce4ec;
+      color: #c2185b;
+    }
+
+    .message {
+      display: none;
+      padding: 13px;
+      border-radius: 7px;
+      margin-top: 15px;
+      line-height: 1.5;
+    }
+
+    .success {
+      display: block;
+      background: #e8f5e9;
+      color: #256029;
+    }
+
+    .error {
+      display: block;
+      background: #ffebee;
+      color: #b71c1c;
+    }
+
+    .request-status {
+      background: #f8f8f8;
+      padding: 15px;
+      border-radius: 8px;
+      line-height: 1.7;
+      margin-top: 12px;
+    }
+
+    .links {
+      text-align: center;
+      margin: 25px 0;
+      line-height: 2.2;
+    }
+
+    .links a {
+      color: #d81b60;
+      text-decoration: none;
+      margin: 0 8px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: #777;
+      font-size: 13px;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>Mubeezi Dating</h1>
+  <p>Connecting Hearts Worldwide</p>
+</header>
+
+<div class="container">
+
+  <div class="card">
+    <h2>Delete Your Account</h2>
+
+    <div class="warning">
+      <strong>Important:</strong> Account deletion is a serious action.
+      Submitting this request does not immediately delete your account.
+      Your request must be processed through our secure deletion system.
+    </div>
+
+    <div class="info">
+      When deletion is completed:
+      <ul style="padding-left:20px; margin-top:8px;">
+        <li>Your dating profile will be removed from discovery.</li>
+        <li>Your account information will be handled according to our privacy policy.</li>
+        <li>Your old message history is planned to be anonymized.</li>
+        <li>You will no longer be able to use the deleted account.</li>
+      </ul>
+    </div>
+
+    <p id="accountInfo">Checking your account...</p>
+  </div>
+
+  <div class="card">
+    <h2>Submit Deletion Request</h2>
+
+    <form id="deletionForm">
+
+      <label for="reason">Reason for leaving (optional)</label>
+      <textarea
+        id="reason"
+        maxlength="1000"
+        placeholder="Tell us why you are leaving..."
+      ></textarea>
+
+      <label for="confirmation">
+        Type DELETE MY ACCOUNT to confirm
+      </label>
+
+      <input
+        type="text"
+        id="confirmation"
+        placeholder="DELETE MY ACCOUNT"
+        autocomplete="off"
+        required
+      >
+
+      <label class="confirm-check">
+        <input type="checkbox" id="agree" required>
+        <span>
+          I understand that I am requesting account deletion and that
+          this request must be securely processed before my account is deleted.
+        </span>
+      </label>
+
+      <button type="submit" class="delete-btn" id="submitBtn">
+        Submit Deletion Request
+      </button>
+
+      <div id="formMessage" class="message"></div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Request Status</h2>
+    <p id="requestStatus">Checking for previous requests...</p>
+    <button class="secondary-btn" onclick="loadRequestStatus()">
+      Refresh Request Status
+    </button>
+  </div>
+
+  <div class="links">
+    <a href="settings.html">Settings</a>
+    <a href="help-support.html">Help & Support</a>
+    <a href="privacy-policy.html">Privacy Policy</a>
+  </div>
+
+</div>
+
+<footer>
+  © 2026 Mubeezi Dating. Connecting Hearts Worldwide.
+</footer>
+
+<script>
+  const SUPABASE_URL = "https://xxtlcdvuiyrdufzvzeob.supabase.co";
+
+  const SUPABASE_ANON_KEY =
+    "sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU";
+
+  const supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
+  );
+
+  let currentUser = null;
+
+  const accountInfo = document.getElementById("accountInfo");
+  const form = document.getElementById("deletionForm");
+  const submitBtn = document.getElementById("submitBtn");
+  const formMessage = document.getElementById("formMessage");
+  const requestStatus = document.getElementById("requestStatus");
+
+  function showMessage(message, type) {
+    formMessage.textContent = message;
+    formMessage.className = "message " + type;
+  }
+
+  async function initializePage() {
+    const { data, error } = await supabaseClient.auth.getUser();
+
+    if (error || !data.user) {
+      accountInfo.textContent =
+        "Please log in before requesting account deletion.";
+
+      form.style.display = "none";
+      requestStatus.textContent = "You must log in to view requests.";
+      return;
+    }
+
+    currentUser = data.user;
+
+    accountInfo.textContent =
+      "Signed in as: " + (currentUser.email || "Your Mubeezi account");
+
+    await loadRequestStatus();
+  }
+
+  async function loadRequestStatus() {
+    if (!currentUser) {
+      requestStatus.textContent = "Please log in first.";
+      return;
+    }
+
+    requestStatus.textContent = "Loading request status...";
+
+    const { data, error } = await supabaseClient
+      .from("account_deletion_requests")
+      .select("id, status, created_at")
+      .eq("user_id", currentUser.id)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (error) {
+      requestStatus.textContent =
+        "Unable to load request status. The account_deletion_requests " +
+        "table and its security policies must be configured in Supabase.";
+
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      requestStatus.textContent =
+        "You have not submitted an account deletion request.";
+      return;
+    }
+
+    const request = data[0];
+
+    const date = request.created_at
+      ? new Date(request.created_at).toLocaleString()
+      : "Date unavailable";
+
+    requestStatus.innerHTML = "";
+
+    const statusText = document.createElement("strong");
+    statusText.textContent = "Status: " + request.status;
+
+    const dateText = document.createElement("p");
+    dateText.textContent = "Submitted: " + date;
+
+    const explanation = document.createElement("p");
+    explanation.textContent =
+      "Submitting a request does not mean your account has already been deleted.";
+
+    requestStatus.appendChild(statusText);
+    requestStatus.appendChild(dateText);
+    requestStatus.appendChild(explanation);
+
+    if (
+      ["pending", "processing", "under_review"].includes(
+        String(request.status).toLowerCase()
+      )
+    ) {
+      form.style.display = "none";
+    }
+  }
+
+  form.addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    if (!currentUser) {
+      showMessage("Please log in before submitting your request.", "error");
+      return;
+    }
+
+    const confirmation =
+      document.getElementById("confirmation").value.trim();
+
+    const agreed = document.getElementById("agree").checked;
+    const reason = document.getElementById("reason").value.trim();
+
+    if (confirmation !== "DELETE MY ACCOUNT") {
+      showMessage(
+        "Please type DELETE MY ACCOUNT exactly as shown.",
+        "error"
+      );
+      return;
+    }
+
+    if (!agreed) {
+      showMessage(
+        "Please confirm that you understand the deletion process.",
+        "error"
+      );
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting request...";
+
+    const { data: existing, error: checkError } = await supabaseClient
+      .from("account_deletion_requests")
+      .select("id, status")
+      .eq("user_id", currentUser.id)
+      .in("status", ["pending", "processing", "under_review"])
+      .limit(1);
+
+    if (checkError) {
+      showMessage(
+        "Could not check existing requests. Please make sure the " +
+        "account_deletion_requests table and RLS policies are configured.",
+        "error"
+      );
+
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit Deletion Request";
+      return;
+    }
+
+    if (existing && existing.length > 0) {
+      showMessage(
+        "You already have a deletion request awaiting processing.",
+        "error"
+      );
+
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit Deletion Request";
+      await loadRequestStatus();
+      return;
+    }
+
+    const { error } = await supabaseClient
+      .from("account_deletion_requests")
+      .insert({
+        user_id: currentUser.id,
+        reason: reason || null,
+        status: "pending"
+      });
+
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Submit Deletion Request";
+
+    if (error) {
+      console.error("Deletion request error:", error);
+
+      showMessage(
+        "Your request could not be submitted. Please check the " +
+        "account_deletion_requests table and its RLS policies.",
+        "error"
+      );
+
+      return;
+    }
+
+    showMessage(
+      "Your account deletion request has been submitted. " +
+      "Your account has NOT been deleted yet. The secure deletion " +
+      "process must be completed by the server.",
+      "success"
+    );
+
+    form.style.display = "none";
+
+    await loadRequestStatus();
+  });
+
+  initializePage();
+</script>
+
+</body>
+</html>

@@ -1,1 +1,262 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Who Likes You | Mubeezi Dating</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #fff5f7; color: #292329; }
+    header { background: #e91e63; color: white; padding: 17px 5%; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .brand { font-size: 24px; font-weight: 800; }
+    .tagline { font-size: 12px; margin-top: 4px; }
+    nav { display: flex; flex-wrap: wrap; gap: 14px; }
+    nav a { color: white; text-decoration: none; font-size: 13px; font-weight: bold; }
+    .container { max-width: 1100px; width: 94%; margin: 28px auto; }
+    .heading { text-align: center; margin-bottom: 23px; }
+    .heading h1 { color: #d81759; font-size: 27px; }
+    .heading p { color: #777; margin-top: 8px; font-size: 14px; }
+    .count { text-align: center; color: #777; font-size: 13px; margin-bottom: 17px; }
+    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 17px; }
+    .card { background: white; border-radius: 13px; overflow: hidden; box-shadow: 0 4px 16px rgba(80,20,40,.07); }
+    .card img { display: block; width: 100%; height: 210px; object-fit: cover; background: #ffe1eb; }
+    .info { padding: 14px; }
+    .info h2 { color: #d81759; font-size: 18px; margin-bottom: 7px; }
+    .location { color: #777; font-size: 13px; margin-bottom: 12px; }
+    .actions { display: flex; gap: 8px; }
+    .actions a, .actions button { flex: 1; text-align: center; border: 0; border-radius: 8px; padding: 11px 7px; font-weight: bold; font-size: 12px; text-decoration: none; cursor: pointer; }
+    .view { background: #f4e8ed; color: #444; }
+    .like { background: #e91e63; color: white; }
+    .like:disabled { opacity: .6; cursor: not-allowed; }
+    .state { background: white; padding: 30px 18px; border-radius: 12px; text-align: center; color: #777; line-height: 1.6; }
+    .message { display: none; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 14px; }
+    .error { background: #ffe9e9; color: #a00000; }
+    .success { background: #e8f8ed; color: #176b32; }
+    footer { text-align: center; color: #999; padding: 25px; font-size: 12px; }
+    @media(max-width: 700px) { .grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; } .card img { height: 170px; } .info { padding: 10px; } .info h2 { font-size: 15px; } }
+    @media(max-width: 390px) { nav { justify-content: center; } header { justify-content: center; text-align: center; } .actions { flex-direction: column; } }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="brand">MUBEEZI DATING</div>
+    <div class="tagline">Connecting Hearts Worldwide</div>
+  </div>
+  <nav>
+    <a href="home.html">Home</a>
+    <a href="discover.html">Discover</a>
+    <a href="likes.html">Likes</a>
+    <a href="matches.html">Matches</a>
+    <a href="messages.html">Messages</a>
+    <a href="my-profile.html">My Profile</a>
+  </nav>
+</header>
+
+<main class="container">
+  <div class="heading">
+    <h1>People Who Like You</h1>
+    <p>Discover members who have shown interest in you.</p>
+  </div>
+
+  <div id="message" class="message"></div>
+  <div id="count" class="count">Loading your likes...</div>
+  <div id="loading" class="state">Loading members who like you...</div>
+  <div id="empty" class="state" style="display:none">
+    You don't have any likes yet. Keep discovering members around the world!
+    <br><br><a href="discover.html">Discover Members</a>
+  </div>
+  <div id="error" class="state" style="display:none"></div>
+  <div id="likesGrid" class="grid"></div>
+</main>
+
+<footer>© 2026 Mubeezi Dating. Connecting Hearts Worldwide.</footer>
+
+<script>
+  const SUPABASE_URL = "https://xxtlcdvuiyrdufzvzeob.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU";
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const grid = document.getElementById("likesGrid");
+  const loading = document.getElementById("loading");
+  const empty = document.getElementById("empty");
+  const errorBox = document.getElementById("error");
+  const messageBox = document.getElementById("message");
+  const count = document.getElementById("count");
+
+  let currentUser = null;
+
+  function showMessage(text, type) {
+    messageBox.textContent = text;
+    messageBox.className = "message " + type;
+    messageBox.style.display = "block";
+  }
+
+  async function loadLikes() {
+    try {
+      const { data: sessionData, error: sessionError } =
+        await db.auth.getSession();
+      if (sessionError) throw sessionError;
+
+      currentUser = sessionData.session?.user;
+      if (!currentUser) {
+        location.href = "login.html?next=likes.html";
+        return;
+      }
+
+      const { data: likes, error: likesError } = await db
+        .from("profile_likes")
+        .select("id, liker_id, created_at")
+        .eq("liked_id", currentUser.id)
+        .order("created_at", { ascending: false });
+
+      if (likesError) throw likesError;
+
+      const uniqueIds = [...new Set(
+        (likes || [])
+          .map(item => item.liker_id)
+          .filter(id => id && id !== currentUser.id)
+      )];
+
+      if (!uniqueIds.length) {
+        loading.style.display = "none";
+        empty.style.display = "block";
+        count.textContent = "0 members like you";
+        return;
+      }
+
+      // Only display profiles that are currently discoverable.
+      const { data: profiles, error: profilesError } = await db
+        .from("profiles")
+        .select("id, display_name, full_name, age, country, profile_photo, profile_visible, is_active, profile_completed")
+        .in("id", uniqueIds)
+        .eq("profile_visible", true)
+        .eq("is_active", true)
+        .eq("profile_completed", true);
+
+      if (profilesError) throw profilesError;
+
+      const visibleProfiles = profiles || [];
+      const visibleIds = new Set(visibleProfiles.map(p => p.id));
+
+      // Remove likes whose senders are no longer discoverable.
+      const displayedLikes = (likes || []).filter(
+        like => visibleIds.has(like.liker_id)
+      );
+
+      count.textContent =
+        `${displayedLikes.length} member${displayedLikes.length === 1 ? "" : "s"} like you`;
+
+      if (!displayedLikes.length) {
+        loading.style.display = "none";
+        empty.style.display = "block";
+        return;
+      }
+
+      const profileMap = new Map(
+        visibleProfiles.map(profile => [profile.id, profile])
+      );
+
+      // Check which of these members you have already liked.
+      const { data: outgoingLikes, error: outgoingError } = await db
+        .from("profile_likes")
+        .select("liked_id")
+        .eq("liker_id", currentUser.id)
+        .in("liked_id", displayedLikes.map(like => like.liker_id));
+
+      if (outgoingError) throw outgoingError;
+
+      const alreadyLiked = new Set(
+        (outgoingLikes || []).map(item => item.liked_id)
+      );
+
+      displayedLikes.forEach(like => {
+        const profile = profileMap.get(like.liker_id);
+        if (!profile) return;
+
+        const card = document.createElement("article");
+        card.className = "card";
+
+        const image = document.createElement("img");
+        image.src = profile.profile_photo ||
+          "https://placehold.co/400x400/fce4ec/e91e63?text=Mubeezi";
+        image.alt = "Member profile photo";
+        image.loading = "lazy";
+        image.onerror = () => {
+          image.src = "https://placehold.co/400x400/fce4ec/e91e63?text=Mubeezi";
+        };
+
+        const info = document.createElement("div");
+        info.className = "info";
+
+        const title = document.createElement("h2");
+        title.textContent =
+          (profile.display_name || profile.full_name || "Mubeezi Member") +
+          (profile.age ? ", " + profile.age : "");
+
+        const locationText = document.createElement("p");
+        locationText.className = "location";
+        locationText.textContent = profile.country || "Worldwide";
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+
+        const view = document.createElement("a");
+        view.className = "view";
+        view.href = "view-profile.html?id=" + encodeURIComponent(profile.id);
+        view.textContent = "View Profile";
+
+        const likeBack = document.createElement("button");
+        likeBack.className = "like";
+        likeBack.textContent = alreadyLiked.has(profile.id) ? "Liked ✓" : "Like Back";
+        likeBack.disabled = alreadyLiked.has(profile.id);
+
+        likeBack.addEventListener("click", async () => {
+          likeBack.disabled = true;
+          likeBack.textContent = "Sending...";
+
+          const { error } = await db.from("profile_likes").insert({
+            liker_id: currentUser.id,
+            liked_id: profile.id
+          });
+
+          if (error) {
+            console.error(error);
+            likeBack.disabled = false;
+            likeBack.textContent = "Try Again";
+            showMessage("Could not send your like. " + error.message, "error");
+            return;
+          }
+
+          likeBack.textContent = "Liked ✓";
+          alreadyLiked.add(profile.id);
+          showMessage("Your interest has been sent!", "success");
+        });
+
+        actions.append(view, likeBack);
+        info.append(title, locationText, actions);
+        card.append(image, info);
+        grid.appendChild(card);
+      });
+
+      loading.style.display = "none";
+      if (!grid.children.length) empty.style.display = "block";
+
+    } catch (error) {
+      console.error("Likes page error:", error);
+      loading.style.display = "none";
+      count.textContent = "";
+      errorBox.textContent =
+        "We couldn't load your likes. Check your Supabase profile_likes table and access policies. " +
+        error.message;
+      errorBox.style.display = "block";
+    }
+  }
+
+  loadLikes();
+</script>
+</body>
+</html>

@@ -1,1 +1,207 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Subscription Management | Mubeezi Dating</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#fff5f7;color:#333}
+header{background:#e91e63;color:white;padding:20px;text-align:center}
+header h1{margin:0}
+header p{margin:6px 0 0}
+nav{background:white;padding:12px;text-align:center;box-shadow:0 2px 6px #ddd}
+nav a{display:inline-block;margin:5px 9px;color:#d81b60;text-decoration:none;font-weight:bold;font-size:14px}
+.container{max-width:750px;margin:30px auto;padding:15px}
+.card{background:white;padding:25px;border-radius:15px;box-shadow:0 3px 15px #00000012;margin-bottom:20px}
+h2{color:#c2185b;margin-top:0}
+.row{display:flex;justify-content:space-between;gap:15px;padding:14px 0;border-bottom:1px solid #eee}
+.row:last-child{border-bottom:0}
+.label{color:#777}
+.value{font-weight:bold;text-align:right}
+.status{padding:15px;border-radius:10px;background:#fff0f5;color:#c2185b;margin-bottom:18px}
+button,.button{display:inline-block;padding:12px 20px;border:0;border-radius:22px;background:#e91e63;color:white;font-weight:bold;text-decoration:none;cursor:pointer}
+.cancel{background:#777}
+.notice{font-size:13px;color:#888;line-height:1.6}
+#message{margin-top:15px;white-space:pre-wrap}
+.error{color:#c62828}
+@media(max-width:500px){.row{flex-direction:column;gap:5px}.value{text-align:left}}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>❤️ Mubeezi Dating</h1>
+<p>Connecting Hearts Worldwide</p>
+</header>
+
+<nav>
+<a href="home.html">Home</a>
+<a href="my-profile.html">My Profile</a>
+<a href="premium.html">Premium</a>
+<a href="settings.html">Settings</a>
+</nav>
+
+<div class="container">
+
+<div class="card">
+<h2>💎 My Subscription</h2>
+
+<div id="status" class="status">Checking your subscription...</div>
+
+<div class="row">
+<span class="label">Plan</span>
+<span class="value" id="plan">—</span>
+</div>
+
+<div class="row">
+<span class="label">Subscription Status</span>
+<span class="value" id="subscriptionStatus">—</span>
+</div>
+
+<div class="row">
+<span class="label">Start Date</span>
+<span class="value" id="startDate">—</span>
+</div>
+
+<div class="row">
+<span class="label">Next Renewal</span>
+<span class="value" id="renewalDate">—</span>
+</div>
+
+<div class="row">
+<span class="label">Auto-Renewal</span>
+<span class="value" id="autoRenew">—</span>
+</div>
+
+<p id="message"></p>
+
+</div>
+
+<div class="card">
+<h2>Manage Your Membership</h2>
+
+<p class="notice">
+Your subscription renews automatically unless cancelled.
+If you cancel, your Premium access continues until the end of your paid period.
+</p>
+
+<button id="cancelButton" class="cancel" type="button" disabled>
+Cancel Subscription
+</button>
+
+<a href="premium.html" class="button">View Premium Plans</a>
+
+<p class="notice">
+Subscription cancellation and payment changes must be confirmed by the secure payment provider.
+</p>
+</div>
+
+</div>
+
+<script>
+const SUPABASE_URL = "https://xxtlcdvuiyrdufzvzeob.supabase.co";
+const SUPABASE_KEY = "sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU";
+
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const statusBox = document.getElementById("status");
+const messageBox = document.getElementById("message");
+const cancelButton = document.getElementById("cancelButton");
+
+let currentUser = null;
+let subscription = null;
+
+function showMessage(message, error = false) {
+    messageBox.textContent = message;
+    messageBox.className = error ? "error" : "";
+}
+
+function formatDate(value) {
+    if (!value) return "Not available";
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) return "Not available";
+
+    return date.toLocaleDateString();
+}
+
+function setValue(id, value) {
+    document.getElementById(id).textContent = value || "Not available";
+}
+
+async function loadSubscription() {
+    try {
+        const { data: sessionData, error: sessionError } =
+            await db.auth.getSession();
+
+        if (sessionError) throw sessionError;
+
+        currentUser = sessionData.session?.user;
+
+        if (!currentUser) {
+            location.href = "login.html";
+            return;
+        }
+
+        const { data, error } = await db
+            .from("subscriptions")
+            .select("*")
+            .eq("user_id", currentUser.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        subscription = data;
+
+        if (!subscription) {
+            statusBox.textContent = "You do not currently have a subscription.";
+            setValue("plan", "Free Membership");
+            setValue("subscriptionStatus", "Inactive");
+            setValue("startDate", "—");
+            setValue("renewalDate", "—");
+            setValue("autoRenew", "Not applicable");
+            return;
+        }
+
+        setValue("plan", subscription.plan_name || subscription.plan || "Premium");
+        setValue("subscriptionStatus", subscription.status || "Unknown");
+        setValue("startDate", formatDate(subscription.start_date));
+        setValue("renewalDate", formatDate(subscription.end_date || subscription.next_renewal));
+        setValue("autoRenew", subscription.auto_renew ? "Enabled" : "Disabled");
+
+        const active = subscription.status === "active";
+
+        statusBox.textContent = active
+            ? "Your subscription information is displayed below."
+            : "Your subscription is not currently active.";
+
+        cancelButton.disabled = !active || !subscription.auto_renew;
+
+    } catch (error) {
+        console.error("Subscription error:", error);
+        statusBox.textContent =
+            "Unable to load subscription information. The subscriptions table may not be configured yet.";
+        statusBox.classList.add("error");
+        cancelButton.disabled = true;
+    }
+}
+
+cancelButton.addEventListener("click", () => {
+    showMessage(
+        "Cancellation is not connected yet. Your subscription has NOT been cancelled. A secure payment-provider cancellation workflow must be integrated first."
+    );
+});
+
+loadSubscription();
+</script>
+
+</body>
+</html>

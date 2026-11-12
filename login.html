@@ -1,1 +1,360 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | Mubeezi Dating</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #fff0f5, #ffe0eb);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .brand {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .brand h1 {
+      color: #e91e63;
+      font-size: 32px;
+      margin-bottom: 7px;
+    }
+
+    .brand p {
+      color: #777;
+      font-size: 14px;
+    }
+
+    .login-card {
+      background: white;
+      width: 100%;
+      max-width: 420px;
+      padding: 32px 25px;
+      border-radius: 16px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.09);
+    }
+
+    .login-card h2 {
+      color: #d81b60;
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 25px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #777;
+      font-size: 14px;
+      margin-bottom: 25px;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: #444;
+    }
+
+    .field {
+      margin-bottom: 18px;
+    }
+
+    input {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 15px;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #e91e63;
+      box-shadow: 0 0 0 2px rgba(233,30,99,0.1);
+    }
+
+    .password-wrapper {
+      position: relative;
+    }
+
+    .password-wrapper input {
+      padding-right: 65px;
+    }
+
+    .show-password {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: none;
+      background: none;
+      color: #d81b60;
+      font-size: 12px;
+      cursor: pointer;
+      width: auto;
+      padding: 5px;
+    }
+
+    .forgot {
+      display: block;
+      text-align: right;
+      color: #d81b60;
+      font-size: 13px;
+      text-decoration: none;
+      margin-top: -7px;
+      margin-bottom: 20px;
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 14px;
+      background: #e91e63;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .login-btn:hover {
+      background: #c2185b;
+    }
+
+    .login-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 23px 0;
+      color: #999;
+      font-size: 13px;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: "";
+      height: 1px;
+      background: #eee;
+      flex: 1;
+    }
+
+    .register {
+      text-align: center;
+      font-size: 14px;
+      color: #666;
+      margin-top: 20px;
+    }
+
+    .register a {
+      color: #d81b60;
+      font-weight: bold;
+      text-decoration: none;
+    }
+
+    .message {
+      display: none;
+      padding: 12px;
+      border-radius: 7px;
+      margin-bottom: 15px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .error {
+      display: block;
+      background: #ffebee;
+      color: #b71c1c;
+    }
+
+    .success {
+      display: block;
+      background: #e8f5e9;
+      color: #256029;
+    }
+
+    footer {
+      margin-top: 25px;
+      color: #888;
+      font-size: 12px;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="brand">
+    <h1>Mubeezi Dating ❤️</h1>
+    <p>Connecting Hearts Worldwide</p>
+  </div>
+
+  <div class="login-card">
+
+    <h2>Welcome Back</h2>
+    <p class="subtitle">Login to meet your special someone.</p>
+
+    <div id="message" class="message"></div>
+
+    <form id="loginForm">
+
+      <div class="field">
+        <label for="email">Email Address</label>
+        <input
+          type="email"
+          id="email"
+          placeholder="Enter your email"
+          autocomplete="email"
+          required
+        >
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+
+        <div class="password-wrapper">
+          <input
+            type="password"
+            id="password"
+            placeholder="Enter your password"
+            autocomplete="current-password"
+            required
+          >
+
+          <button
+            type="button"
+            class="show-password"
+            id="togglePassword"
+          >
+            Show
+          </button>
+        </div>
+      </div>
+
+      <a href="forgot-password.html" class="forgot">
+        Forgot password?
+      </a>
+
+      <button type="submit" class="login-btn" id="loginBtn">
+        Login
+      </button>
+
+    </form>
+
+    <div class="divider">OR</div>
+
+    <div class="register">
+      Don't have an account?
+      <a href="register.html">Create Account</a>
+    </div>
+
+  </div>
+
+  <footer>
+    © 2026 Mubeezi Dating. All rights reserved.
+    <br><br>
+    By continuing, you confirm that you are 18 years or older.
+  </footer>
+
+<script>
+  const SUPABASE_URL =
+    "https://xxtlcdvuiyrdufzvzeob.supabase.co";
+
+  const SUPABASE_ANON_KEY =
+    "sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU";
+
+  const supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
+  );
+
+  const loginForm = document.getElementById("loginForm");
+  const loginBtn = document.getElementById("loginBtn");
+  const messageBox = document.getElementById("message");
+  const passwordInput = document.getElementById("password");
+  const togglePassword = document.getElementById("togglePassword");
+
+  function showMessage(text, type) {
+    messageBox.textContent = text;
+    messageBox.className = "message " + type;
+  }
+
+  togglePassword.addEventListener("click", function() {
+    if (passwordInput.type === "password") {
+      passwordInput.type = "text";
+      togglePassword.textContent = "Hide";
+    } else {
+      passwordInput.type = "password";
+      togglePassword.textContent = "Show";
+    }
+  });
+
+  loginForm.addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    const email = document.getElementById("email").value.trim();
+    const password = passwordInput.value;
+
+    loginBtn.disabled = true;
+    loginBtn.textContent = "Logging in...";
+
+    messageBox.className = "message";
+
+    try {
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
+
+      if (error) {
+        showMessage(error.message, "error");
+        return;
+      }
+
+      if (!data.user) {
+        showMessage("Login failed. Please try again.", "error");
+        return;
+      }
+
+      showMessage("Login successful! Opening Mubeezi Dating...", "success");
+
+      window.location.href = "discover.html";
+
+    } catch (error) {
+      showMessage(
+        "Something went wrong. Please check your internet connection.",
+        "error"
+      );
+
+    } finally {
+      loginBtn.disabled = false;
+      loginBtn.textContent = "Login";
+    }
+  });
+</script>
+
+</body>
+</html>
+

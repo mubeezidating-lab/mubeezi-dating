@@ -1,1 +1,242 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Matches | Mubeezi Dating</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#fff5f7;color:#333}
+header{background:#e91e63;color:white;padding:20px;text-align:center}
+header h1{margin:0;font-size:25px}
+header p{margin:6px 0 0}
+nav{background:white;padding:12px;text-align:center;box-shadow:0 2px 6px #ddd}
+nav a{display:inline-block;margin:5px 9px;color:#d81b60;text-decoration:none;font-weight:bold;font-size:14px}
+.container{max-width:1050px;margin:25px auto;padding:15px}
+.heading{text-align:center;margin-bottom:25px}
+.heading h2{color:#d81b60;margin-bottom:7px}
+.heading p{color:#777}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px}
+.card{background:white;border-radius:14px;overflow:hidden;box-shadow:0 3px 12px #00000012;text-align:center;padding-bottom:17px}
+.card img{width:100%;height:230px;object-fit:cover;background:#ffe0e8}
+.card h3{margin:13px 5px 5px;color:#c2185b}
+.card p{margin:5px;color:#777;font-size:14px}
+.actions{display:flex;justify-content:center;gap:9px;margin-top:15px;flex-wrap:wrap}
+.btn{border:0;border-radius:20px;padding:10px 17px;text-decoration:none;font-weight:bold;cursor:pointer;font-size:13px}
+.view{background:#fce4ec;color:#c2185b}
+.message{background:#e91e63;color:white}
+.empty,.status{background:white;text-align:center;padding:25px;border-radius:12px;color:#777}
+.error{color:#c62828}
+.hidden{display:none}
+@media(max-width:500px){.container{padding:10px}.card img{height:210px}}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>❤️ Mubeezi Dating</h1>
+<p>Connecting Hearts Worldwide</p>
+</header>
+
+<nav>
+<a href="home.html">Home</a>
+<a href="discover.html">Discover</a>
+<a href="likes.html">Likes</a>
+<a href="matches.html">Matches</a>
+<a href="messages.html">Messages</a>
+<a href="my-profile.html">My Profile</a>
+</nav>
+
+<div class="container">
+
+<div class="heading">
+<h2>❤️ My Matches</h2>
+<p>People who liked you and whom you liked back.</p>
+</div>
+
+<div id="status" class="status">Loading your matches...</div>
+<div id="matches" class="grid"></div>
+
+</div>
+
+<script>
+const SUPABASE_URL = "https://xxtlcdvuiyrdufzvzeob.supabase.co";
+const SUPABASE_KEY = "sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU";
+
+const db = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+);
+
+const statusBox = document.getElementById("status");
+const matchesBox = document.getElementById("matches");
+
+let currentUser = null;
+
+function showStatus(message, isError = false) {
+    statusBox.textContent = message;
+    statusBox.classList.remove("hidden");
+    statusBox.classList.toggle("error", isError);
+}
+
+function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&":"&amp;",
+        "<":"&lt;",
+        ">":"&gt;",
+        '"':"&quot;",
+        "'":"&#039;"
+    })[char]);
+}
+
+function getAge(profile) {
+    if (profile.age) return profile.age;
+
+    if (profile.date_of_birth) {
+        const birth = new Date(profile.date_of_birth);
+        const today = new Date();
+        let age = today.getFullYear() - birth.getFullYear();
+
+        const birthdayPassed =
+            today.getMonth() > birth.getMonth() ||
+            (today.getMonth() === birth.getMonth() &&
+             today.getDate() >= birth.getDate());
+
+        if (!birthdayPassed) age--;
+        return age;
+    }
+
+    return "";
+}
+
+async function loadMatches() {
+    try {
+        const { data: sessionData, error: sessionError } =
+            await db.auth.getSession();
+
+        if (sessionError) throw sessionError;
+
+        currentUser = sessionData.session?.user;
+
+        if (!currentUser) {
+            window.location.href = "login.html";
+            return;
+        }
+
+        // Get people this member has liked.
+        const { data: outgoingLikes, error: outgoingError } =
+            await db
+                .from("profile_likes")
+                .select("liked_id")
+                .eq("liker_id", currentUser.id);
+
+        if (outgoingError) throw outgoingError;
+
+        // Get people who have liked this member.
+        const { data: incomingLikes, error: incomingError } =
+            await db
+                .from("profile_likes")
+                .select("liker_id")
+                .eq("liked_id", currentUser.id);
+
+        if (incomingError) throw incomingError;
+
+        const outgoingIds = new Set(
+            (outgoingLikes || []).map(item => item.liked_id)
+        );
+
+        const mutualIds = [
+            ...new Set(
+                (incomingLikes || [])
+                    .map(item => item.liker_id)
+                    .filter(id => outgoingIds.has(id) && id !== currentUser.id)
+            )
+        ];
+
+        if (mutualIds.length === 0) {
+            matchesBox.innerHTML = "";
+            showStatus("You don't have any matches yet. Visit Discover and like someone to get started.");
+            return;
+        }
+
+        // Load only profiles that are visible and active.
+        const { data: profiles, error: profilesError } =
+            await db
+                .from("profiles")
+                .select("id,display_name,full_name,age,date_of_birth,country,profile_photo")
+                .in("id", mutualIds)
+                .eq("profile_visible", true)
+                .eq("is_active", true)
+                .eq("profile_completed", true);
+
+        if (profilesError) throw profilesError;
+
+        matchesBox.innerHTML = "";
+
+        if (!profiles || profiles.length === 0) {
+            showStatus("Your matches could not be displayed. Some profiles may no longer be visible.");
+            return;
+        }
+
+        statusBox.classList.add("hidden");
+
+        profiles.forEach(profile => {
+            const name = profile.display_name ||
+                         profile.full_name ||
+                         "Mubeezi Member";
+
+            const age = getAge(profile);
+            const country = profile.country || "";
+            const photo = profile.profile_photo ||
+                "https://placehold.co/500x500/fce4ec/c2185b?text=Mubeezi";
+
+            const card = document.createElement("article");
+            card.className = "card";
+
+            card.innerHTML = `
+                <img src="${escapeHTML(photo)}"
+                     alt="Profile photo"
+                     onerror="this.onerror=null;this.src='https://placehold.co/500x500/fce4ec/c2185b?text=Mubeezi'">
+
+                <h3>${escapeHTML(name)}</h3>
+                <p>${age ? escapeHTML(age) + " years old" : "Age not provided"}</p>
+                <p>${escapeHTML(country)}</p>
+
+                <div class="actions">
+                    <a class="btn view"
+                       href="view-profile.html?id=${encodeURIComponent(profile.id)}">
+                       View Profile
+                    </a>
+
+                    <a class="btn message"
+                       href="messages.html?user=${encodeURIComponent(profile.id)}">
+                       Message
+                    </a>
+                </div>
+            `;
+
+            matchesBox.appendChild(card);
+        });
+
+        showStatus(`You have ${profiles.length} mutual match${profiles.length === 1 ? "" : "es"}! ❤️`);
+
+    } catch (error) {
+        console.error("Matches loading error:", error);
+        matchesBox.innerHTML = "";
+        showStatus(
+            "We couldn't load your matches. Check your profile_likes table, profile permissions, and internet connection.",
+            true
+        );
+    }
+}
+
+loadMatches();
+</script>
+
+</body>
+</html>

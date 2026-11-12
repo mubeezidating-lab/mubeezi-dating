@@ -1,1 +1,895 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Complete Your Profile | Mubeezi Dating</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: #fff5f7;
+      color: #292329;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #e91e63;
+      color: white;
+      padding: 19px 5%;
+      text-align: center;
+    }
+
+    .brand {
+      font-size: 27px;
+      font-weight: 800;
+      letter-spacing: .4px;
+    }
+
+    .tagline {
+      font-size: 13px;
+      margin-top: 5px;
+    }
+
+    .container {
+      width: 92%;
+      max-width: 650px;
+      margin: 30px auto;
+      background: white;
+      padding: 28px;
+      border-radius: 16px;
+      box-shadow: 0 5px 25px rgba(80, 20, 40, .08);
+    }
+
+    h1 {
+      text-align: center;
+      color: #d81759;
+      font-size: 25px;
+      margin-bottom: 9px;
+    }
+
+    .intro {
+      text-align: center;
+      color: #777;
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 25px;
+    }
+
+    .progress-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: #777;
+      margin-bottom: 9px;
+    }
+
+    .progress-track {
+      height: 8px;
+      background: #f5dce5;
+      border-radius: 20px;
+      overflow: hidden;
+      margin-bottom: 28px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 20%;
+      background: #e91e63;
+      transition: width .3s;
+    }
+
+    .step {
+      display: none;
+    }
+
+    .step.active {
+      display: block;
+    }
+
+    .step h2 {
+      color: #d81759;
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+
+    .step-description {
+      color: #777;
+      font-size: 13px;
+      margin-bottom: 22px;
+      line-height: 1.5;
+    }
+
+    .field {
+      margin-bottom: 19px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #ddd;
+      border-radius: 9px;
+      outline: none;
+      font-size: 15px;
+      background: white;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: #e91e63;
+      box-shadow: 0 0 0 2px rgba(233, 30, 99, .1);
+    }
+
+    input[type="file"] {
+      background: #fff7fa;
+      padding: 11px;
+    }
+
+    .hint {
+      display: block;
+      color: #888;
+      font-size: 12px;
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+
+    .checkbox-line {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+
+    .checkbox-line input {
+      width: auto;
+      accent-color: #e91e63;
+    }
+
+    .photo-preview {
+      display: none;
+      width: 130px;
+      height: 130px;
+      object-fit: cover;
+      border-radius: 50%;
+      margin: 15px auto;
+      border: 4px solid #f8c6d7;
+    }
+
+    .private-note {
+      background: #fff2f6;
+      padding: 13px;
+      border-radius: 9px;
+      color: #8a3152;
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 18px;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    button {
+      border: none;
+      padding: 14px 20px;
+      border-radius: 9px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .next-btn, .finish-btn {
+      background: #e91e63;
+      color: white;
+      flex: 1;
+    }
+
+    .back-btn {
+      background: #f2e8ec;
+      color: #444;
+      min-width: 100px;
+    }
+
+    button:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    .message {
+      display: none;
+      padding: 13px;
+      border-radius: 9px;
+      margin-top: 18px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .error {
+      background: #ffe9e9;
+      color: #a00000;
+    }
+
+    .success {
+      background: #e8f8ed;
+      color: #176b32;
+    }
+
+    footer {
+      text-align: center;
+      color: #999;
+      font-size: 12px;
+      padding: 20px;
+    }
+
+    @media (max-width: 500px) {
+      .container {
+        padding: 21px 17px;
+        margin: 20px auto;
+      }
+
+      .brand {
+        font-size: 24px;
+      }
+
+      .buttons {
+        gap: 8px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <div class="brand">MUBEEZI DATING</div>
+  <div class="tagline">Connecting Hearts Worldwide</div>
+</header>
+
+<main class="container">
+
+  <h1>Complete Your Profile</h1>
+  <p class="intro">
+    Tell us a little about yourself so you can connect with people
+    around the world.
+  </p>
+
+  <div class="progress-info">
+    <span id="stepLabel">Step 1 of 5</span>
+    <span id="progressPercent">20% completed</span>
+  </div>
+
+  <div class="progress-track">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+
+  <!-- STEP 1 -->
+  <section class="step active" data-step="1">
+    <h2>About You</h2>
+    <p class="step-description">
+      Start with some basic information about yourself.
+    </p>
+
+    <div class="field">
+      <label for="dateOfBirth">Date of birth</label>
+      <input type="date" id="dateOfBirth" required>
+      <small class="hint">You must be at least 18 years old.</small>
+    </div>
+
+    <div class="field">
+      <label for="gender">Your gender</label>
+      <select id="gender" required>
+        <option value="">Select gender</option>
+        <option value="Male">Male</option>
+        <option value="Female">Female</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="country">Your country</label>
+      <input type="text" id="country" list="countryList"
+             placeholder="Enter your country" required>
+      <datalist id="countryList">
+        <option value="Uganda">
+        <option value="Kenya">
+        <option value="Tanzania">
+        <option value="Rwanda">
+        <option value="Nigeria">
+        <option value="Ghana">
+        <option value="South Africa">
+        <option value="United States">
+        <option value="United Kingdom">
+        <option value="Canada">
+        <option value="Australia">
+        <option value="India">
+        <option value="France">
+        <option value="Germany">
+        <option value="United Arab Emirates">
+      </datalist>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step" data-step="2">
+    <h2>Your Lifestyle</h2>
+    <p class="step-description">
+      These details help members understand you better.
+    </p>
+
+    <div class="field">
+      <label for="religion">Religion</label>
+      <select id="religion">
+        <option value="">Prefer not to say</option>
+        <option>Christianity</option>
+        <option>Islam</option>
+        <option>Hinduism</option>
+        <option>Buddhism</option>
+        <option>African Traditional Religion</option>
+        <option>Other</option>
+        <option>No religion</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="drinking">Drinking habits</label>
+      <select id="drinking">
+        <option value="">Prefer not to say</option>
+        <option>Never</option>
+        <option>Occasionally</option>
+        <option>Socially</option>
+        <option>Regularly</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="smoking">Smoking habits</label>
+      <select id="smoking">
+        <option value="">Prefer not to say</option>
+        <option>Never</option>
+        <option>Occasionally</option>
+        <option>Regularly</option>
+        <option>Trying to quit</option>
+      </select>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step" data-step="3">
+    <h2>Who Would You Like to Meet?</h2>
+    <p class="step-description">
+      Choose who you want to discover and your preferred age range.
+    </p>
+
+    <div class="field">
+      <label for="interestedIn">I want to meet</label>
+      <select id="interestedIn" required>
+        <option value="">Choose one</option>
+        <option value="Men">Men</option>
+        <option value="Women">Women</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="relationshipGoal">Relationship goal</label>
+      <select id="relationshipGoal">
+        <option value="">Select your goal</option>
+        <option value="Marriage">Marriage</option>
+        <option value="Long-term relationship">Long-term relationship</option>
+        <option value="Serious dating">Serious dating</option>
+        <option value="Friendship">Friendship</option>
+        <option value="Casual dating">Casual dating</option>
+        <option value="Not sure yet">Not sure yet</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="minAge">Minimum age preference</label>
+      <input type="number" id="minAge" min="18" max="100" value="18">
+    </div>
+
+    <div class="field">
+      <label for="maxAge">Maximum age preference</label>
+      <input type="number" id="maxAge" min="18" max="100" value="100">
+      <label class="checkbox-line">
+        <input type="checkbox" id="noUpperLimit">
+        No upper age limit
+      </label>
+    </div>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="step" data-step="4">
+    <h2>Skin Tone Preferences</h2>
+    <p class="step-description">
+      These preferences are optional. You can leave them blank.
+    </p>
+
+    <div class="field">
+      <label for="skinTone">Your skin tone</label>
+      <select id="skinTone">
+        <option value="">Prefer not to say</option>
+        <option>Very fair</option>
+        <option>Fair</option>
+        <option>Light</option>
+        <option>Medium</option>
+        <option>Olive</option>
+        <option>Brown</option>
+        <option>Dark brown</option>
+        <option>Deep dark</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="preferredSkinTone">Preferred skin tone</label>
+      <select id="preferredSkinTone">
+        <option value="">No preference</option>
+        <option>Very fair</option>
+        <option>Fair</option>
+        <option>Light</option>
+        <option>Medium</option>
+        <option>Olive</option>
+        <option>Brown</option>
+        <option>Dark brown</option>
+        <option>Deep dark</option>
+      </select>
+    </div>
+  </section>
+
+  <!-- STEP 5 -->
+  <section class="step" data-step="5">
+    <h2>Your Photos</h2>
+    <p class="step-description">
+      Add a profile picture so other members can recognise you.
+    </p>
+
+    <div class="private-note">
+      Your profile picture can appear publicly on Mubeezi Dating.
+      Your optional full photo is stored privately and is not displayed
+      publicly by this page.
+    </div>
+
+    <div class="field">
+      <label for="profilePhoto">Profile picture *</label>
+      <input type="file" id="profilePhoto" accept="image/*" required>
+      <img id="profilePreview" class="photo-preview" alt="Profile picture preview">
+      <small class="hint">Choose a clear picture of yourself. Maximum 5 MB.</small>
+    </div>
+
+    <div class="field">
+      <label for="fullPhoto">Optional private full photo</label>
+      <input type="file" id="fullPhoto" accept="image/*">
+      <small class="hint">Maximum 8 MB. This photo is uploaded to private storage.</small>
+    </div>
+  </section>
+
+  <div class="message error" id="errorMessage"></div>
+  <div class="message success" id="successMessage"></div>
+
+  <div class="buttons">
+    <button type="button" class="back-btn" id="backBtn" style="display:none">
+      Back
+    </button>
+
+    <button type="button" class="next-btn" id="nextBtn">
+      Continue
+    </button>
+
+    <button type="button" class="finish-btn" id="finishBtn" style="display:none">
+      Complete Profile
+    </button>
+  </div>
+
+</main>
+
+<footer>
+  © 2026 Mubeezi Dating. Connecting Hearts Worldwide.
+</footer>
+
+<script>
+  // SUPABASE CONNECTION
+  const SUPABASE_URL = "https://xxtlcdvuiyrdufzvzeob.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU";
+
+  const db = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+
+  let currentStep = 1;
+  const totalSteps = 5;
+
+  const steps = document.querySelectorAll(".step");
+  const nextBtn = document.getElementById("nextBtn");
+  const backBtn = document.getElementById("backBtn");
+  const finishBtn = document.getElementById("finishBtn");
+
+  const errorMessage = document.getElementById("errorMessage");
+  const successMessage = document.getElementById("successMessage");
+
+  function showMessage(message, type = "error") {
+    errorMessage.style.display = "none";
+    successMessage.style.display = "none";
+
+    const target = type === "success" ? successMessage : errorMessage;
+    target.textContent = message;
+    target.style.display = "block";
+  }
+
+  function clearMessages() {
+    errorMessage.style.display = "none";
+    successMessage.style.display = "none";
+  }
+
+  function displayStep() {
+    steps.forEach((step, index) => {
+      step.classList.toggle("active", index + 1 === currentStep);
+    });
+
+    const percentage = currentStep * 20;
+
+    document.getElementById("stepLabel").textContent =
+      `Step ${currentStep} of ${totalSteps}`;
+
+    document.getElementById("progressPercent").textContent =
+      `${percentage}% completed`;
+
+    document.getElementById("progressBar").style.width =
+      `${percentage}%`;
+
+    backBtn.style.display = currentStep === 1 ? "none" : "block";
+    nextBtn.style.display = currentStep === totalSteps ? "none" : "block";
+    finishBtn.style.display = currentStep === totalSteps ? "block" : "none";
+
+    clearMessages();
+  }
+
+  function calculateAge(dateString) {
+    const birthDate = new Date(dateString + "T00:00:00");
+    const today = new Date();
+
+    let age = today.getFullYear() - birthDate.getFullYear();
+
+    const monthDifference = today.getMonth() - birthDate.getMonth();
+
+    if (
+      monthDifference < 0 ||
+      (monthDifference === 0 && today.getDate() < birthDate.getDate())
+    ) {
+      age--;
+    }
+
+    return age;
+  }
+
+  function validateStep() {
+    if (currentStep === 1) {
+      const dob = document.getElementById("dateOfBirth").value;
+      const gender = document.getElementById("gender").value;
+      const country = document.getElementById("country").value.trim();
+
+      if (!dob || !gender || !country) {
+        showMessage("Please complete your date of birth, gender and country.");
+        return false;
+      }
+
+      const age = calculateAge(dob);
+
+      if (age < 18 || age > 120) {
+        showMessage("Mubeezi Dating is for adults aged 18 and above.");
+        return false;
+      }
+
+      if (new Date(dob + "T00:00:00") > new Date()) {
+        showMessage("Your date of birth cannot be in the future.");
+        return false;
+      }
+    }
+
+    if (currentStep === 3) {
+      const interestedIn = document.getElementById("interestedIn").value;
+      const minAge = Number(document.getElementById("minAge").value);
+      const noUpperLimit = document.getElementById("noUpperLimit").checked;
+      const maxAge = Number(document.getElementById("maxAge").value);
+
+      if (!interestedIn) {
+        showMessage("Please choose whether you want to meet men or women.");
+        return false;
+      }
+
+      if (!Number.isInteger(minAge) || minAge < 18 || minAge > 100) {
+        showMessage("Minimum age must be between 18 and 100.");
+        return false;
+      }
+
+      if (!noUpperLimit &&
+          (!Number.isInteger(maxAge) || maxAge < minAge || maxAge > 100)) {
+        showMessage("Maximum age must be at least your minimum age and no more than 100.");
+        return false;
+      }
+    }
+
+    if (currentStep === 5) {
+      const photo = document.getElementById("profilePhoto").files[0];
+      const fullPhoto = document.getElementById("fullPhoto").files[0];
+
+      if (!photo) {
+        showMessage("Please choose a profile picture.");
+        return false;
+      }
+
+      if (!photo.type.startsWith("image/")) {
+        showMessage("Your profile picture must be an image.");
+        return false;
+      }
+
+      if (photo.size > 5 * 1024 * 1024) {
+        showMessage("Your profile picture must be 5 MB or smaller.");
+        return false;
+      }
+
+      if (fullPhoto && !fullPhoto.type.startsWith("image/")) {
+        showMessage("Your private photo must be an image.");
+        return false;
+      }
+
+      if (fullPhoto && fullPhoto.size > 8 * 1024 * 1024) {
+        showMessage("Your private photo must be 8 MB or smaller.");
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  nextBtn.addEventListener("click", () => {
+    if (!validateStep()) return;
+
+    if (currentStep < totalSteps) {
+      currentStep++;
+      displayStep();
+    }
+  });
+
+  backBtn.addEventListener("click", () => {
+    if (currentStep > 1) {
+      currentStep--;
+      displayStep();
+    }
+  });
+
+  document.getElementById("noUpperLimit").addEventListener("change", event => {
+    const maxAge = document.getElementById("maxAge");
+    maxAge.disabled = event.target.checked;
+
+    if (event.target.checked) {
+      maxAge.value = 100;
+    }
+  });
+
+  document.getElementById("profilePhoto").addEventListener("change", event => {
+    const file = event.target.files[0];
+    const preview = document.getElementById("profilePreview");
+
+    if (!file) {
+      preview.style.display = "none";
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      showMessage("Please select an image file.");
+      event.target.value = "";
+      preview.style.display = "none";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      showMessage("Your profile picture must be 5 MB or smaller.");
+      event.target.value = "";
+      preview.style.display = "none";
+      return;
+    }
+
+    preview.src = URL.createObjectURL(file);
+    preview.style.display = "block";
+    clearMessages();
+  });
+
+  async function uploadImage(bucket, userId, file) {
+    const extension = file.name.split(".").pop().toLowerCase();
+    const safeExtension = /^[a-z0-9]+$/.test(extension) ? extension : "jpg";
+    const filePath = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${safeExtension}`;
+
+    const { error } = await db.storage
+      .from(bucket)
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: file.type
+      });
+
+    if (error) throw error;
+
+    return filePath;
+  }
+
+  async function completeProfile() {
+    if (!validateStep()) return;
+
+    finishBtn.disabled = true;
+    finishBtn.textContent = "Saving your profile...";
+
+    try {
+      const { data: sessionData, error: sessionError } =
+        await db.auth.getSession();
+
+      if (sessionError) throw sessionError;
+
+      const user = sessionData.session?.user;
+
+      if (!user) {
+        window.location.href =
+          "login.html?next=complete-profile.html";
+        return;
+      }
+
+      const { data: existingProfile, error: profileReadError } =
+        await db.from("profiles")
+          .select("id, profile_photo, full_photo")
+          .eq("id", user.id)
+          .maybeSingle();
+
+      if (profileReadError) throw profileReadError;
+
+      if (!existingProfile) {
+        throw new Error(
+          "Your member profile record was not found. Please check that your Supabase signup process creates a profiles row for each new member."
+        );
+      }
+
+      const dob = document.getElementById("dateOfBirth").value;
+      const age = calculateAge(dob);
+
+      const noUpperLimit =
+        document.getElementById("noUpperLimit").checked;
+
+      const minAge =
+        Number(document.getElementById("minAge").value);
+
+      const maxAge = noUpperLimit
+        ? null
+        : Number(document.getElementById("maxAge").value);
+
+      const profileFile =
+        document.getElementById("profilePhoto").files[0];
+
+      const fullPhotoFile =
+        document.getElementById("fullPhoto").files[0];
+
+      // Upload public profile picture.
+      const profilePath = await uploadImage(
+        "profile-photos",
+        user.id,
+        profileFile
+      );
+
+      const { data: publicPhotoData } = db.storage
+        .from("profile-photos")
+        .getPublicUrl(profilePath);
+
+      const profilePhotoUrl = publicPhotoData.publicUrl;
+
+      // Upload optional full photo to private storage.
+      let fullPhotoPath = existingProfile.full_photo || null;
+
+      if (fullPhotoFile) {
+        fullPhotoPath = await uploadImage(
+          "member-private-photos",
+          user.id,
+          fullPhotoFile
+        );
+      }
+
+      // Save sensitive information in the private preferences table.
+      const privatePreferences = {
+        id: user.id,
+        user_id: user.id,
+        date_of_birth: dob,
+        gender: document.getElementById("gender").value,
+        interested_in: document.getElementById("interestedIn").value,
+        min_age_preference: minAge,
+        max_age_preference: maxAge,
+        religion: document.getElementById("religion").value || null,
+        drinking: document.getElementById("drinking").value || null,
+        smoking: document.getElementById("smoking").value || null,
+        skin_tone: document.getElementById("skinTone").value || null,
+        preferred_skin_tone:
+          document.getElementById("preferredSkinTone").value || null,
+        updated_at: new Date().toISOString()
+      };
+
+      const { error: preferencesError } = await db
+        .from("profile_private_preferences")
+        .upsert(privatePreferences, { onConflict: "id" });
+
+      if (preferencesError) throw preferencesError;
+
+      // Update the member's public profile.
+      const profileUpdate = {
+        age: age,
+        country: document.getElementById("country").value.trim(),
+        relationship_goal:
+          document.getElementById("relationshipGoal").value || null,
+        profile_photo: profilePhotoUrl,
+        full_photo: fullPhotoPath,
+        profile_completed: true,
+        onboarding_completed: true
+      };
+
+      const { error: updateError } = await db
+        .from("profiles")
+        .update(profileUpdate)
+        .eq("id", user.id);
+
+      if (updateError) throw updateError;
+
+      showMessage(
+        "Your profile has been saved. Welcome to Mubeezi Dating!",
+        "success"
+      );
+
+      finishBtn.textContent = "Profile completed!";
+
+      setTimeout(() => {
+        window.location.href = "discover.html";
+      }, 1500);
+
+    } catch (error) {
+      console.error("Profile completion error:", error);
+
+      showMessage(
+        error.message ||
+        "We could not save your profile. Please try again."
+      );
+
+      finishBtn.disabled = false;
+      finishBtn.textContent = "Complete Profile";
+    }
+  }
+
+  finishBtn.addEventListener("click", completeProfile);
+
+  // Prevent selecting a future date of birth.
+  document.getElementById("dateOfBirth").max =
+    new Date().toISOString().split("T")[0];
+
+  // Require a signed-in member.
+  (async function checkLogin() {
+    const { data, error } = await db.auth.getSession();
+
+    if (error || !data.session) {
+      window.location.href = "login.html?next=complete-profile.html";
+    }
+  })();
+
+  displayStep();
+</script>
+
+</body>
+</html>

@@ -1,1 +1,553 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Discover Members | Mubeezi Dating</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #fff5f7;
+      color: #292329;
+    }
+
+    header {
+      background: #e91e63;
+      color: white;
+      padding: 17px 5%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .brand { font-size: 24px; font-weight: 800; }
+    .tagline { font-size: 12px; margin-top: 4px; }
+
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    nav a {
+      color: white;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    .container {
+      max-width: 1150px;
+      width: 94%;
+      margin: 28px auto;
+    }
+
+    .heading { text-align: center; margin-bottom: 22px; }
+    .heading h1 { color: #d81759; font-size: 28px; }
+    .heading p { color: #777; margin-top: 8px; font-size: 14px; }
+
+    .filters {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+
+    .filters input, .filters select {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #e7d5dc;
+      border-radius: 9px;
+      background: white;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .filters input:focus, .filters select:focus {
+      border-color: #e91e63;
+    }
+
+    .results-info {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      color: #777;
+      font-size: 13px;
+      margin-bottom: 15px;
+    }
+
+    .profile-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 17px;
+    }
+
+    .profile-card {
+      background: white;
+      border-radius: 13px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(80, 20, 40, .07);
+    }
+
+    .profile-card img {
+      width: 100%;
+      height: 230px;
+      object-fit: cover;
+      display: block;
+      background: #ffe1eb;
+    }
+
+    .profile-info { padding: 14px; }
+
+    .profile-info h2 {
+      color: #d81759;
+      font-size: 18px;
+      margin-bottom: 7px;
+    }
+
+    .profile-location {
+      font-size: 13px;
+      color: #777;
+      margin-bottom: 9px;
+    }
+
+    .profile-bio {
+      color: #555;
+      font-size: 13px;
+      line-height: 1.5;
+      min-height: 38px;
+      margin-bottom: 12px;
+    }
+
+    .view-btn {
+      display: block;
+      width: 100%;
+      padding: 12px;
+      text-align: center;
+      background: #e91e63;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .view-btn:hover { background: #c91650; }
+
+    .state {
+      background: white;
+      padding: 30px 18px;
+      text-align: center;
+      border-radius: 12px;
+      color: #777;
+      line-height: 1.6;
+    }
+
+    .state button {
+      margin-top: 13px;
+      padding: 10px 18px;
+      background: #e91e63;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin: 25px 0;
+    }
+
+    .pagination button {
+      border: none;
+      padding: 11px 18px;
+      border-radius: 8px;
+      background: #e91e63;
+      color: white;
+      cursor: pointer;
+    }
+
+    .pagination button:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+    }
+
+    footer {
+      text-align: center;
+      color: #999;
+      padding: 25px;
+      font-size: 12px;
+    }
+
+    @media (max-width: 480px) {
+      header { justify-content: center; text-align: center; }
+      nav { justify-content: center; }
+      .filters { grid-template-columns: 1fr; }
+      .profile-grid { gap: 10px; }
+      .profile-card img { height: 165px; }
+      .profile-info { padding: 10px; }
+      .profile-info h2 { font-size: 15px; }
+      .profile-bio { font-size: 12px; }
+      .view-btn { font-size: 12px; padding: 10px 5px; }
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <div>
+    <div class="brand">MUBEEZI DATING</div>
+    <div class="tagline">Connecting Hearts Worldwide</div>
+  </div>
+
+  <nav>
+    <a href="home.html">Home</a>
+    <a href="discover.html">Discover</a>
+    <a href="likes.html">Likes</a>
+    <a href="matches.html">Matches</a>
+    <a href="messages.html">Messages</a>
+    <a href="my-profile.html">My Profile</a>
+  </nav>
+</header>
+
+<main class="container">
+
+  <div class="heading">
+    <h1>Discover People</h1>
+    <p>Meet interesting people and make meaningful connections worldwide.</p>
+  </div>
+
+  <div class="filters">
+    <input
+      type="search"
+      id="searchInput"
+      placeholder="Search by name, country or interests..."
+      aria-label="Search profiles"
+    >
+
+    <select id="countryFilter" aria-label="Filter by country">
+      <option value="">All Countries</option>
+    </select>
+  </div>
+
+  <div class="results-info">
+    <span id="resultCount">Loading members...</span>
+    <span>Worldwide discovery</span>
+  </div>
+
+  <div id="loadingState" class="state">
+    Loading member profiles...
+  </div>
+
+  <div id="errorState" class="state" style="display:none"></div>
+
+  <div id="emptyState" class="state" style="display:none">
+    No profiles match your search. Try another name or country.
+  </div>
+
+  <div id="profileGrid" class="profile-grid"></div>
+
+  <div class="pagination" id="pagination" style="display:none">
+    <button id="previousBtn" type="button">Previous</button>
+    <button id="nextBtn" type="button">Next</button>
+  </div>
+
+</main>
+
+<footer>
+  © 2026 Mubeezi Dating. Connecting Hearts Worldwide.
+</footer>
+
+<script>
+  const SUPABASE_URL = "https://xxtlcdvuiyrdufzvzeob.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU";
+
+  const db = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+
+  const PAGE_SIZE = 20;
+
+  let allProfiles = [];
+  let filteredProfiles = [];
+  let currentPage = 0;
+  let currentUserId = null;
+
+  const grid = document.getElementById("profileGrid");
+  const loadingState = document.getElementById("loadingState");
+  const errorState = document.getElementById("errorState");
+  const emptyState = document.getElementById("emptyState");
+  const searchInput = document.getElementById("searchInput");
+  const countryFilter = document.getElementById("countryFilter");
+
+  function showError(message) {
+    loadingState.style.display = "none";
+    emptyState.style.display = "none";
+    grid.innerHTML = "";
+    errorState.textContent = message;
+    errorState.style.display = "block";
+  }
+
+  function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;"
+    })[char]);
+  }
+
+  function getInterests(profile) {
+    if (Array.isArray(profile.interests)) {
+      return profile.interests.join(" ");
+    }
+
+    return profile.interests || "";
+  }
+
+  async function loadAllProfiles() {
+    loadingState.style.display = "block";
+    errorState.style.display = "none";
+
+    try {
+      const { data: sessionData, error: sessionError } =
+        await db.auth.getSession();
+
+      if (sessionError) throw sessionError;
+
+      currentUserId = sessionData.session?.user?.id || null;
+
+      const profiles = [];
+      let from = 0;
+      const batchSize = 500;
+
+      while (true) {
+        const { data, error } = await db
+          .from("profiles")
+          .select(`
+            id,
+            display_name,
+            full_name,
+            age,
+            country,
+            profile_photo,
+            bio,
+            interests,
+            profile_visible,
+            is_active,
+            profile_completed,
+            created_at
+          `)
+          .eq("profile_visible", true)
+          .eq("is_active", true)
+          .eq("profile_completed", true)
+          .order("created_at", { ascending: false })
+          .range(from, from + batchSize - 1);
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) break;
+
+        profiles.push(...data);
+
+        if (data.length < batchSize) break;
+
+        from += batchSize;
+      }
+
+      allProfiles = profiles.filter(
+        profile => profile.id !== currentUserId
+      );
+
+      populateCountryFilter();
+      applyFilters();
+
+      loadingState.style.display = "none";
+
+    } catch (error) {
+      console.error("Discover loading error:", error);
+
+      showError(
+        "We couldn't load member profiles. Please check your Supabase permissions and profiles table."
+      );
+    }
+  }
+
+  function populateCountryFilter() {
+    const countries = [
+      ...new Set(
+        allProfiles
+          .map(profile => profile.country)
+          .filter(Boolean)
+      )
+    ].sort((a, b) => a.localeCompare(b));
+
+    countryFilter.innerHTML =
+      '<option value="">All Countries</option>';
+
+    countries.forEach(country => {
+      const option = document.createElement("option");
+      option.value = country;
+      option.textContent = country;
+      countryFilter.appendChild(option);
+    });
+  }
+
+  function applyFilters() {
+    const search = searchInput.value.trim().toLowerCase();
+    const country = countryFilter.value;
+
+    filteredProfiles = allProfiles.filter(profile => {
+      const name =
+        profile.display_name ||
+        profile.full_name ||
+        "";
+
+      const searchableText = [
+        name,
+        profile.country,
+        profile.bio,
+        getInterests(profile)
+      ].join(" ").toLowerCase();
+
+      const matchesSearch = !search ||
+        searchableText.includes(search);
+
+      const matchesCountry = !country ||
+        profile.country === country;
+
+      return matchesSearch && matchesCountry;
+    });
+
+    currentPage = 0;
+    renderProfiles();
+  }
+
+  function renderProfiles() {
+    grid.innerHTML = "";
+
+    const start = currentPage * PAGE_SIZE;
+    const pageProfiles = filteredProfiles.slice(
+      start,
+      start + PAGE_SIZE
+    );
+
+    document.getElementById("resultCount").textContent =
+      `${filteredProfiles.length} member${filteredProfiles.length === 1 ? "" : "s"} found`;
+
+    emptyState.style.display =
+      filteredProfiles.length === 0 ? "block" : "none";
+
+    grid.style.display =
+      filteredProfiles.length === 0 ? "none" : "grid";
+
+    pageProfiles.forEach(profile => {
+      const card = document.createElement("article");
+      card.className = "profile-card";
+
+      const name = escapeHTML(
+        profile.display_name ||
+        profile.full_name ||
+        "Mubeezi Member"
+      );
+
+      const country = escapeHTML(profile.country || "Worldwide");
+      const age = profile.age ? `, ${escapeHTML(profile.age)}` : "";
+      const bio = escapeHTML(
+        profile.bio || "Discover this member and learn more about them."
+      );
+
+      const photo = profile.profile_photo ||
+        "https://placehold.co/400x400/fce4ec/e91e63?text=Mubeezi";
+
+      const image = document.createElement("img");
+      image.src = photo;
+      image.alt = name + " profile picture";
+      image.loading = "lazy";
+      image.onerror = () => {
+        image.src =
+          "https://placehold.co/400x400/fce4ec/e91e63?text=Mubeezi";
+      };
+
+      const info = document.createElement("div");
+      info.className = "profile-info";
+
+      const title = document.createElement("h2");
+      title.textContent = name + age;
+
+      const location = document.createElement("p");
+      location.className = "profile-location";
+      location.textContent = country;
+
+      const description = document.createElement("p");
+      description.className = "profile-bio";
+      description.textContent = bio;
+
+      const link = document.createElement("a");
+      link.className = "view-btn";
+      link.href = "view-profile.html?id=" +
+        encodeURIComponent(profile.id);
+      link.textContent = "View Profile";
+
+      info.append(title, location, description, link);
+      card.append(image, info);
+      grid.appendChild(card);
+    });
+
+    const totalPages = Math.ceil(
+      filteredProfiles.length / PAGE_SIZE
+    );
+
+    const pagination = document.getElementById("pagination");
+
+    pagination.style.display =
+      totalPages > 1 ? "flex" : "none";
+
+    document.getElementById("previousBtn").disabled =
+      currentPage === 0;
+
+    document.getElementById("nextBtn").disabled =
+      currentPage >= totalPages - 1;
+  }
+
+  searchInput.addEventListener("input", applyFilters);
+  countryFilter.addEventListener("change", applyFilters);
+
+  document.getElementById("previousBtn").addEventListener("click", () => {
+    if (currentPage > 0) {
+      currentPage--;
+      renderProfiles();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  });
+
+  document.getElementById("nextBtn").addEventListener("click", () => {
+    const totalPages = Math.ceil(
+      filteredProfiles.length / PAGE_SIZE
+    );
+
+    if (currentPage < totalPages - 1) {
+      currentPage++;
+      renderProfiles();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  });
+
+  loadAllProfiles();
+</script>
+
+</body>
+</html>

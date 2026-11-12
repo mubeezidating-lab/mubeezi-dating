@@ -1,1 +1,199 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Profile Verification | Mubeezi Dating</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#fff5f7;color:#333}
+header{background:#e91e63;color:white;padding:20px;text-align:center}
+header h1{margin:0}
+header p{margin:6px 0 0}
+nav{background:white;padding:12px;text-align:center;box-shadow:0 2px 6px #ddd}
+nav a{display:inline-block;margin:5px 9px;color:#d81b60;text-decoration:none;font-weight:bold;font-size:14px}
+.container{max-width:650px;margin:25px auto;padding:15px}
+.card{background:white;padding:25px;border-radius:15px;box-shadow:0 3px 15px #00000012}
+h2{text-align:center;color:#c2185b}
+.intro{text-align:center;color:#777;line-height:1.6}
+label{display:block;font-weight:bold;margin:17px 0 7px}
+input,select,textarea{width:100%;padding:12px;border:1px solid #ddd;border-radius:9px;font:inherit;background:white}
+button{width:100%;padding:14px;margin-top:22px;border:0;border-radius:25px;background:#e91e63;color:white;font-size:16px;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.6}
+.hint{font-size:12px;color:#888;line-height:1.5}
+.status{text-align:center;margin-top:16px;white-space:pre-wrap}
+.error{color:#c62828}
+.success{color:#16803c}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>❤️ Mubeezi Dating</h1>
+<p>Connecting Hearts Worldwide</p>
+</header>
+
+<nav>
+<a href="home.html">Home</a>
+<a href="discover.html">Discover</a>
+<a href="my-profile.html">My Profile</a>
+<a href="settings.html">Settings</a>
+</nav>
+
+<div class="container">
+<div class="card">
+
+<h2>✓ Verify Your Profile</h2>
+
+<p class="intro">
+Show other members that your profile has been checked.
+Verification is optional and is not something you need to purchase.
+</p>
+
+<form id="verificationForm">
+
+<label for="documentType">Identity Document Type</label>
+<select id="documentType" required>
+<option value="">Choose document type</option>
+<option value="national_id">National Identity Card</option>
+<option value="passport">Passport</option>
+<option value="driving_permit">Driving Permit</option>
+</select>
+
+<label for="documentNumber">Document Number</label>
+<input id="documentNumber" type="text" maxlength="100" required
+placeholder="Enter your document number">
+
+<label for="selfie">Upload a Recent Selfie</label>
+<input id="selfie" type="file" accept="image/*" required>
+<p class="hint">Choose a clear, recent photo of yourself. Maximum file size: 5 MB.</p>
+
+<label for="notes">Additional Information (Optional)</label>
+<textarea id="notes" maxlength="500" rows="3"
+placeholder="Anything you would like our verification team to know"></textarea>
+
+<p class="hint">
+Your identity information is sensitive. Only submit it when the secure verification service and privacy protections have been configured.
+</p>
+
+<button id="submitButton" type="submit">Submit Verification Request</button>
+
+</form>
+
+<div id="status" class="status"></div>
+
+</div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://xxtlcdvuiyrdufzvzeob.supabase.co";
+const SUPABASE_KEY = "sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU";
+
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const form = document.getElementById("verificationForm");
+const statusBox = document.getElementById("status");
+const submitButton = document.getElementById("submitButton");
+const selfieInput = document.getElementById("selfie");
+
+let currentUser = null;
+
+function showStatus(message, type = "") {
+    statusBox.textContent = message;
+    statusBox.className = "status " + type;
+}
+
+selfieInput.addEventListener("change", () => {
+    const file = selfieInput.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+        showStatus("Please choose an image file.", "error");
+        selfieInput.value = "";
+        return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+        showStatus("Your selfie must be smaller than 5 MB.", "error");
+        selfieInput.value = "";
+    }
+});
+
+async function start() {
+    const { data, error } = await db.auth.getSession();
+
+    if (error) {
+        showStatus("Unable to check your login.", "error");
+        return;
+    }
+
+    currentUser = data.session?.user;
+
+    if (!currentUser) {
+        location.href = "login.html";
+        return;
+    }
+}
+
+form.addEventListener("submit", async event => {
+    event.preventDefault();
+
+    if (!currentUser) {
+        showStatus("Please sign in first.", "error");
+        return;
+    }
+
+    const file = selfieInput.files[0];
+
+    if (!file) {
+        showStatus("Please upload your selfie.", "error");
+        return;
+    }
+
+    submitButton.disabled = true;
+    showStatus("Submitting your request...");
+
+    try {
+        // Do not upload identity documents or selfies to a public bucket.
+        // A secure server-side verification service must handle these files.
+        const { data: existing, error: lookupError } = await db
+            .from("profile_verification_requests")
+            .select("id,status")
+            .eq("user_id", currentUser.id)
+            .in("status", ["pending", "under_review"])
+            .limit(1);
+
+        if (lookupError) throw lookupError;
+
+        if (existing && existing.length > 0) {
+            showStatus("You already have a verification request under review.", "error");
+            return;
+        }
+
+        // This table should store a secure verification-provider reference,
+        // not raw identity document numbers or public selfie URLs.
+        showStatus(
+            "Your request form is ready, but secure verification submission has not yet been connected. No identity document or selfie has been uploaded.",
+            "error"
+        );
+
+    } catch (error) {
+        console.error("Verification request error:", error);
+        showStatus(
+            "We couldn't check your verification request. Please check the verification database setup.",
+            "error"
+        );
+    } finally {
+        submitButton.disabled = false;
+    }
+});
+
+start();
+</script>
+
+</body>
+</html>

@@ -1,1 +1,269 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edit Profile | Mubeezi Dating</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#fff5f7;color:#333}
+header{background:#e91e63;color:white;padding:20px;text-align:center}
+header h1{margin:0}
+header p{margin:6px 0 0}
+nav{background:white;padding:12px;text-align:center;box-shadow:0 2px 6px #ddd}
+nav a{display:inline-block;margin:5px 9px;color:#d81b60;text-decoration:none;font-weight:bold;font-size:14px}
+.container{max-width:700px;margin:25px auto;padding:15px}
+.form-card{background:white;padding:25px;border-radius:15px;box-shadow:0 3px 15px #00000012}
+h2{text-align:center;color:#c2185b;margin-top:0}
+label{display:block;font-weight:bold;margin:15px 0 7px;color:#555}
+input,textarea,select{width:100%;padding:12px;border:1px solid #ddd;border-radius:9px;font:inherit;background:white}
+textarea{min-height:110px;resize:vertical}
+.photo-area{text-align:center;margin:18px 0}
+.photo-area img{width:145px;height:145px;border-radius:50%;object-fit:cover;background:#fce4ec;border:4px solid #f8bbd0}
+button{width:100%;padding:14px;border:0;border-radius:25px;background:#e91e63;color:white;font-size:16px;font-weight:bold;cursor:pointer;margin-top:22px}
+button:disabled{opacity:.6;cursor:not-allowed}
+.status{text-align:center;margin-top:15px;color:#777;white-space:pre-wrap}
+.error{color:#c62828}
+.success{color:#16803c}
+.hint{font-size:12px;color:#888;margin-top:6px}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>❤️ Mubeezi Dating</h1>
+<p>Connecting Hearts Worldwide</p>
+</header>
+
+<nav>
+<a href="home.html">Home</a>
+<a href="discover.html">Discover</a>
+<a href="my-profile.html">My Profile</a>
+<a href="profile-preview.html">Profile Preview</a>
+</nav>
+
+<div class="container">
+<div class="form-card">
+
+<h2>✏️ Edit My Profile</h2>
+
+<div class="photo-area">
+<img id="photoPreview"
+src="https://placehold.co/400x400/fce4ec/c2185b?text=Your+Photo"
+alt="Profile photo preview">
+</div>
+
+<form id="profileForm">
+
+<label for="displayName">Display Name</label>
+<input id="displayName" type="text" maxlength="60" required>
+
+<label for="bio">About Me</label>
+<textarea id="bio" maxlength="1000" placeholder="Tell others a little about yourself..."></textarea>
+
+<label for="occupation">Occupation</label>
+<input id="occupation" type="text" maxlength="100">
+
+<label for="education">Education</label>
+<input id="education" type="text" maxlength="150">
+
+<label for="country">Country</label>
+<input id="country" type="text" maxlength="100">
+
+<label for="city">City</label>
+<input id="city" type="text" maxlength="100">
+
+<label for="interests">Interests</label>
+<input id="interests" type="text" placeholder="Music, travel, cooking">
+
+<p class="hint">Separate your interests with commas.</p>
+
+<label for="photoFile">Change Profile Photo</label>
+<input id="photoFile" type="file" accept="image/*">
+<p class="hint">Choose a clear photo of yourself. Maximum file size: 5 MB.</p>
+
+<button id="saveButton" type="submit">Save Changes</button>
+
+</form>
+
+<div id="status" class="status"></div>
+
+</div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://xxtlcdvuiyrdufzvzeob.supabase.co";
+const SUPABASE_KEY = "sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU";
+
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentUser = null;
+let existingPhoto = "";
+
+const form = document.getElementById("profileForm");
+const statusBox = document.getElementById("status");
+const saveButton = document.getElementById("saveButton");
+const photoFile = document.getElementById("photoFile");
+
+function showStatus(message, type = "") {
+    statusBox.textContent = message;
+    statusBox.className = "status " + type;
+}
+
+async function loadProfile() {
+    try {
+        const { data: sessionData, error: sessionError } =
+            await db.auth.getSession();
+
+        if (sessionError) throw sessionError;
+
+        currentUser = sessionData.session?.user;
+
+        if (!currentUser) {
+            location.href = "login.html";
+            return;
+        }
+
+        const { data: profile, error } = await db
+            .from("profiles")
+            .select("display_name,full_name,bio,occupation,education,country,city,interests,profile_photo")
+            .eq("id", currentUser.id)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        if (!profile) {
+            showStatus("Please complete your profile first.", "error");
+            saveButton.disabled = true;
+            return;
+        }
+
+        document.getElementById("displayName").value =
+            profile.display_name || profile.full_name || "";
+
+        document.getElementById("bio").value = profile.bio || "";
+        document.getElementById("occupation").value = profile.occupation || "";
+        document.getElementById("education").value = profile.education || "";
+        document.getElementById("country").value = profile.country || "";
+        document.getElementById("city").value = profile.city || "";
+
+        const interests = profile.interests;
+
+        document.getElementById("interests").value =
+            Array.isArray(interests) ? interests.join(", ") : (interests || "");
+
+        existingPhoto = profile.profile_photo || "";
+
+        if (existingPhoto) {
+            document.getElementById("photoPreview").src = existingPhoto;
+        }
+
+    } catch (error) {
+        console.error(error);
+        showStatus("We couldn't load your profile. Check your database permissions.", "error");
+        saveButton.disabled = true;
+    }
+}
+
+photoFile.addEventListener("change", () => {
+    const file = photoFile.files[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+        showStatus("Please select an image file.", "error");
+        photoFile.value = "";
+        return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+        showStatus("Your photo must be smaller than 5 MB.", "error");
+        photoFile.value = "";
+        return;
+    }
+
+    document.getElementById("photoPreview").src =
+        URL.createObjectURL(file);
+});
+
+form.addEventListener("submit", async event => {
+    event.preventDefault();
+
+    if (!currentUser) return;
+
+    saveButton.disabled = true;
+    showStatus("Saving your changes...");
+
+    try {
+        let photoUrl = existingPhoto;
+        const file = photoFile.files[0];
+
+        if (file) {
+            const extension = file.name.split(".").pop().toLowerCase();
+            const safeExtension = /^[a-z0-9]+$/.test(extension) ? extension : "jpg";
+            const filePath = `${currentUser.id}/profile-${Date.now()}.${safeExtension}`;
+
+            const { error: uploadError } = await db.storage
+                .from("profile-photos")
+                .upload(filePath, file, {
+                    upsert: true,
+                    contentType: file.type
+                });
+
+            if (uploadError) throw uploadError;
+
+            const { data: publicData } = db.storage
+                .from("profile-photos")
+                .getPublicUrl(filePath);
+
+            photoUrl = publicData.publicUrl;
+        }
+
+        const interestList = document.getElementById("interests")
+            .value.split(",")
+            .map(item => item.trim())
+            .filter(Boolean);
+
+        const updates = {
+            display_name: document.getElementById("displayName").value.trim(),
+            bio: document.getElementById("bio").value.trim(),
+            occupation: document.getElementById("occupation").value.trim(),
+            education: document.getElementById("education").value.trim(),
+            country: document.getElementById("country").value.trim(),
+            city: document.getElementById("city").value.trim(),
+            interests: interestList,
+            profile_photo: photoUrl
+        };
+
+        const { error: updateError } = await db
+            .from("profiles")
+            .update(updates)
+            .eq("id", currentUser.id);
+
+        if (updateError) throw updateError;
+
+        existingPhoto = photoUrl;
+        photoFile.value = "";
+
+        showStatus("Your profile has been updated successfully! ❤️", "success");
+
+    } catch (error) {
+        console.error("Profile update error:", error);
+        showStatus(
+            "We couldn't save your changes. Check your profiles table permissions and profile-photos storage bucket.",
+            "error"
+        );
+    } finally {
+        saveButton.disabled = false;
+    }
+});
+
+loadProfile();
+</script>
+
+</body>
+</html>

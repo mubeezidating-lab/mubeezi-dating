@@ -1,1 +1,252 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Profile | Mubeezi Dating</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#fff5f7;color:#333}
+header{background:#e91e63;color:white;text-align:center;padding:20px}
+header h1{margin:0}
+header p{margin:6px 0 0}
+nav{background:white;padding:12px;text-align:center;box-shadow:0 2px 6px #ddd}
+nav a{display:inline-block;margin:5px 9px;color:#d81b60;text-decoration:none;font-weight:bold;font-size:14px}
+.container{max-width:850px;margin:25px auto;padding:15px}
+.profile{background:white;border-radius:16px;overflow:hidden;box-shadow:0 3px 15px #00000012}
+.cover{height:130px;background:linear-gradient(120deg,#e91e63,#ff80ab)}
+.profile-content{padding:20px;text-align:center}
+.avatar{width:155px;height:155px;object-fit:cover;border-radius:50%;border:5px solid white;margin-top:-95px;background:#fce4ec}
+.name{color:#c2185b;margin:12px 0 5px;font-size:25px}
+.location{color:#888;margin:5px}
+.bio{margin:18px auto;max-width:600px;line-height:1.6;color:#555;white-space:pre-wrap}
+.details{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;text-align:left;margin-top:22px}
+.detail{background:#fff5f7;padding:14px;border-radius:10px}
+.detail strong{display:block;color:#c2185b;margin-bottom:6px}
+.detail span{overflow-wrap:anywhere}
+.buttons{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:25px}
+.btn{display:inline-block;border:0;border-radius:22px;padding:12px 20px;text-decoration:none;font-weight:bold;cursor:pointer}
+.edit{background:#e91e63;color:white}
+.preview{background:#fce4ec;color:#c2185b}
+.status{text-align:center;background:white;padding:20px;border-radius:12px;color:#777}
+.error{color:#c62828}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>❤️ Mubeezi Dating</h1>
+<p>Connecting Hearts Worldwide</p>
+</header>
+
+<nav>
+<a href="home.html">Home</a>
+<a href="discover.html">Discover</a>
+<a href="likes.html">Likes</a>
+<a href="matches.html">Matches</a>
+<a href="messages.html">Messages</a>
+<a href="notifications.html">Notifications</a>
+</nav>
+
+<div class="container">
+
+<div id="status" class="status">Loading your profile...</div>
+
+<div id="profile" class="profile" style="display:none">
+
+<div class="cover"></div>
+
+<div class="profile-content">
+
+<img id="photo" class="avatar" alt="My profile photo">
+
+<h2 id="name" class="name"></h2>
+<p id="ageCountry" class="location"></p>
+
+<p id="bio" class="bio"></p>
+
+<div class="details">
+
+<div class="detail">
+<strong>Occupation</strong>
+<span id="occupation">Not provided</span>
+</div>
+
+<div class="detail">
+<strong>Education</strong>
+<span id="education">Not provided</span>
+</div>
+
+<div class="detail">
+<strong>Interests</strong>
+<span id="interests">Not provided</span>
+</div>
+
+<div class="detail">
+<strong>Relationship Goal</strong>
+<span id="relationshipGoal">Not provided</span>
+</div>
+
+<div class="detail">
+<strong>Country</strong>
+<span id="country">Not provided</span>
+</div>
+
+<div class="detail">
+<strong>Profile Status</strong>
+<span id="profileStatus"></span>
+</div>
+
+</div>
+
+<div class="buttons">
+<a href="edit-profile.html" class="btn edit">Edit My Profile</a>
+<a href="profile-preview.html" class="btn preview">Preview My Profile</a>
+</div>
+
+</div>
+</div>
+
+</div>
+
+<script>
+const SUPABASE_URL = "https://xxtlcdvuiyrdufzvzeob.supabase.co";
+const SUPABASE_KEY = "sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU";
+
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const statusBox = document.getElementById("status");
+const profileBox = document.getElementById("profile");
+
+function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&":"&amp;",
+        "<":"&lt;",
+        ">":"&gt;",
+        '"':"&quot;",
+        "'":"&#039;"
+    })[char]);
+}
+
+function setText(id, value, fallback = "Not provided") {
+    document.getElementById(id).textContent =
+        value === null || value === undefined || value === ""
+        ? fallback
+        : value;
+}
+
+function calculateAge(dateOfBirth) {
+    if (!dateOfBirth) return "";
+
+    const birth = new Date(dateOfBirth);
+    const today = new Date();
+
+    let age = today.getFullYear() - birth.getFullYear();
+
+    if (
+        today.getMonth() < birth.getMonth() ||
+        (today.getMonth() === birth.getMonth() &&
+         today.getDate() < birth.getDate())
+    ) {
+        age--;
+    }
+
+    return age;
+}
+
+async function loadMyProfile() {
+    try {
+        const { data: sessionData, error: sessionError } =
+            await db.auth.getSession();
+
+        if (sessionError) throw sessionError;
+
+        const user = sessionData.session?.user;
+
+        if (!user) {
+            location.href = "login.html";
+            return;
+        }
+
+        const { data: profile, error } = await db
+            .from("profiles")
+            .select("*")
+            .eq("id", user.id)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        if (!profile) {
+            statusBox.textContent =
+                "Your profile has not been created yet. Please complete your profile.";
+            const link = document.createElement("a");
+            link.href = "complete-profile.html";
+            link.textContent = "Complete My Profile";
+            link.style.cssText = "display:block;margin-top:15px;color:#e91e63;font-weight:bold";
+            statusBox.appendChild(link);
+            return;
+        }
+
+        const name = profile.display_name ||
+                     profile.full_name ||
+                     profile.username ||
+                     "Mubeezi Member";
+
+        const age = profile.age ||
+                    calculateAge(profile.date_of_birth);
+
+        setText("name", name);
+        setText(
+            "ageCountry",
+            [age ? age + " years old" : "", profile.city, profile.country]
+                .filter(Boolean).join(" · "),
+            "Welcome to your profile"
+        );
+
+        setText("bio", profile.bio);
+        setText("occupation", profile.occupation);
+        setText("education", profile.education);
+        setText("relationshipGoal", profile.relationship_goal);
+        setText("country", profile.country);
+
+        let interests = profile.interests;
+
+        if (Array.isArray(interests)) {
+            interests = interests.join(", ");
+        }
+
+        setText("interests", interests);
+
+        setText(
+            "profileStatus",
+            profile.profile_visible ? "Published" : "Not published"
+        );
+
+        const photo = document.getElementById("photo");
+        photo.src = profile.profile_photo ||
+            "https://placehold.co/400x400/fce4ec/c2185b?text=Your+Photo";
+
+        photo.onerror = () => {
+            photo.src = "https://placehold.co/400x400/fce4ec/c2185b?text=Your+Photo";
+        };
+
+        statusBox.style.display = "none";
+        profileBox.style.display = "block";
+
+    } catch (error) {
+        console.error("My profile error:", error);
+        statusBox.textContent =
+            "We couldn't load your profile. Please check your profiles table and permissions.";
+        statusBox.classList.add("error");
+    }
+}
+
+loadMyProfile();
+</script>
+
+</body>
+</html>

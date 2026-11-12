@@ -1,1 +1,388 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact Us | Mubeezi Dating</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #fff5f7;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    header {
+      background: linear-gradient(135deg, #e91e63, #c2185b);
+      color: white;
+      text-align: center;
+      padding: 30px 15px;
+    }
+
+    header h1 {
+      font-size: 28px;
+      margin-bottom: 7px;
+    }
+
+    .container {
+      max-width: 850px;
+      margin: 30px auto;
+      padding: 0 16px;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-bottom: 20px;
+      color: #c2185b;
+      font-weight: bold;
+      text-decoration: none;
+    }
+
+    .intro {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .intro h2 {
+      color: #c2185b;
+      margin-bottom: 8px;
+    }
+
+    .intro p {
+      color: #777;
+    }
+
+    .contact-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+
+    .contact-card {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.05);
+    }
+
+    .contact-card .icon {
+      font-size: 30px;
+      margin-bottom: 8px;
+    }
+
+    .contact-card h3 {
+      color: #c2185b;
+      margin-bottom: 7px;
+    }
+
+    .contact-card p {
+      color: #777;
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+
+    .contact-card a {
+      display: inline-block;
+      color: #e91e63;
+      margin-top: 10px;
+      font-weight: bold;
+      text-decoration: none;
+    }
+
+    .form-container {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.05);
+    }
+
+    .form-container h2 {
+      color: #c2185b;
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      font-size: 14px;
+      margin: 14px 0 7px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 7px;
+      font-size: 14px;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #e91e63;
+    }
+
+    textarea {
+      min-height: 140px;
+      resize: vertical;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 18px;
+      background: #e91e63;
+      color: white;
+      border: none;
+      border-radius: 7px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #c2185b;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .form-message {
+      display: none;
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 7px;
+      font-size: 14px;
+    }
+
+    .success {
+      display: block;
+      background: #e8f5e9;
+      color: #256029;
+    }
+
+    .error {
+      display: block;
+      background: #ffebee;
+      color: #b71c1c;
+    }
+
+    footer {
+      text-align: center;
+      color: #888;
+      padding: 25px 15px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>Contact Mubeezi Dating</h1>
+    <p>Connecting Hearts Worldwide</p>
+  </header>
+
+  <main class="container">
+
+    <a href="home.html" class="back-link">← Back to Home</a>
+
+    <section class="intro">
+      <h2>We Would Love to Hear From You</h2>
+      <p>
+        Have a question, suggestion, complaint or business enquiry?
+        Send us a message and our support team will assist you.
+      </p>
+    </section>
+
+    <section class="contact-cards">
+
+      <div class="contact-card">
+        <div class="icon">✉️</div>
+        <h3>Email</h3>
+        <p>Contact our customer support team.</p>
+        <a href="mailto:support@mubeezi.com">Send Email</a>
+      </div>
+
+      <div class="contact-card">
+        <div class="icon">🛡️</div>
+        <h3>Safety & Security</h3>
+        <p>Report suspicious accounts or safety concerns.</p>
+        <a href="#contactForm">Report an Issue</a>
+      </div>
+
+      <div class="contact-card">
+        <div class="icon">🤝</div>
+        <h3>Business Enquiries</h3>
+        <p>Contact us about partnerships and collaboration.</p>
+        <a href="#contactForm">Get in Touch</a>
+      </div>
+
+    </section>
+
+    <section class="form-container" id="contactForm">
+
+      <h2>Send Us a Message</h2>
+
+      <form id="contactFormElement">
+
+        <label for="name">Full Name</label>
+        <input
+          type="text"
+          id="name"
+          required
+          placeholder="Enter your full name"
+        >
+
+        <label for="email">Email Address</label>
+        <input
+          type="email"
+          id="email"
+          required
+          placeholder="Enter your email address"
+        >
+
+        <label for="reason">Reason for Contact</label>
+        <select id="reason" required>
+          <option value="">Choose a reason</option>
+          <option value="General Question">General question</option>
+          <option value="Account Support">Account support</option>
+          <option value="Payment Enquiry">Payment enquiry</option>
+          <option value="Safety Report">Safety report</option>
+          <option value="Complaint">Complaint</option>
+          <option value="Feedback">Feedback or suggestion</option>
+          <option value="Business Partnership">Business partnership</option>
+          <option value="Other">Other</option>
+        </select>
+
+        <label for="subject">Subject</label>
+        <input
+          type="text"
+          id="subject"
+          required
+          placeholder="Enter message subject"
+        >
+
+        <label for="message">Your Message</label>
+        <textarea
+          id="message"
+          required
+          placeholder="Write your message here..."
+        ></textarea>
+
+        <button type="submit" id="submitButton">
+          Submit Message
+        </button>
+
+        <div id="formMessage" class="form-message"></div>
+
+      </form>
+    </section>
+
+  </main>
+
+  <footer>
+    © 2026 Mubeezi Dating. Connecting Hearts Worldwide.
+    <p style="margin-top:8px;">
+      <a href="about-us.html" style="color:#c2185b;">About Us</a> |
+      <a href="help-support.html" style="color:#c2185b;">Help & Support</a> |
+      <a href="privacy-policy.html" style="color:#c2185b;">Privacy Policy</a>
+    </p>
+  </footer>
+
+  <script>
+    const SUPABASE_URL = "https://xxtlcdvuiyrdufzvzeob.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU";
+
+    const supabaseClient = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY
+    );
+
+    const form = document.getElementById("contactFormElement");
+    const button = document.getElementById("submitButton");
+    const formMessage = document.getElementById("formMessage");
+
+    async function loadMemberDetails() {
+      const { data } = await supabaseClient.auth.getUser();
+
+      if (!data.user) return;
+
+      document.getElementById("email").value =
+        data.user.email || "";
+
+      const { data: profile } = await supabaseClient
+        .from("profiles")
+        .select("display_name, full_name")
+        .eq("id", data.user.id)
+        .maybeSingle();
+
+      if (profile) {
+        document.getElementById("name").value =
+          profile.display_name || profile.full_name || "";
+      }
+    }
+
+    form.addEventListener("submit", async function(event) {
+      event.preventDefault();
+
+      button.disabled = true;
+      button.textContent = "Submitting...";
+
+      formMessage.className = "form-message";
+      formMessage.style.display = "none";
+
+      const { data: authData } = await supabaseClient.auth.getUser();
+
+      const contactMessage = {
+        user_id: authData.user ? authData.user.id : null,
+        name: document.getElementById("name").value.trim(),
+        email: document.getElementById("email").value.trim(),
+        reason: document.getElementById("reason").value,
+        subject: document.getElementById("subject").value.trim(),
+        message: document.getElementById("message").value.trim()
+      };
+
+      const { error } = await supabaseClient
+        .from("contact_messages")
+        .insert(contactMessage);
+
+      if (error) {
+        console.error("Contact submission error:", error);
+
+        formMessage.textContent =
+          "Your message could not be submitted. Please try again later or contact support by email.";
+
+        formMessage.className = "form-message error";
+      } else {
+        formMessage.textContent =
+          "Your message has been submitted successfully. Thank you for contacting Mubeezi Dating.";
+
+        formMessage.className = "form-message success";
+
+        form.reset();
+        loadMemberDetails();
+      }
+
+      button.disabled = false;
+      button.textContent = "Submit Message";
+    });
+
+    loadMemberDetails();
+  </script>
+
+</body>
+</html>

@@ -1,1 +1,438 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Help & Support | Mubeezi Dating</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #fff5f7;
+      color: #333;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #e91e63, #c2185b);
+      color: white;
+      text-align: center;
+      padding: 25px 15px;
+    }
+
+    header h1 {
+      font-size: 27px;
+      margin-bottom: 7px;
+    }
+
+    header p {
+      font-size: 14px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 30px auto;
+      padding: 0 16px;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-bottom: 22px;
+      color: #c2185b;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    .intro {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .intro h2 {
+      color: #c2185b;
+      margin-bottom: 9px;
+    }
+
+    .intro p {
+      color: #777;
+      line-height: 1.6;
+    }
+
+    .support-options {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+
+    .option {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.05);
+    }
+
+    .option .icon {
+      font-size: 30px;
+      margin-bottom: 10px;
+    }
+
+    .option h3 {
+      color: #c2185b;
+      margin-bottom: 8px;
+    }
+
+    .option p {
+      font-size: 13px;
+      color: #777;
+      line-height: 1.5;
+    }
+
+    .option a {
+      display: inline-block;
+      margin-top: 12px;
+      color: #e91e63;
+      font-weight: bold;
+      text-decoration: none;
+      overflow-wrap: anywhere;
+    }
+
+    .support-form {
+      background: white;
+      padding: 22px;
+      border-radius: 12px;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.05);
+    }
+
+    .support-form h2 {
+      color: #c2185b;
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      margin: 14px 0 7px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 7px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: #e91e63;
+    }
+
+    textarea {
+      min-height: 130px;
+      resize: vertical;
+    }
+
+    button {
+      width: 100%;
+      background: #e91e63;
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 7px;
+      margin-top: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    button:hover {
+      background: #c2185b;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .message {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 7px;
+      display: none;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    .success {
+      display: block;
+      background: #e8f5e9;
+      color: #256029;
+    }
+
+    .error {
+      display: block;
+      background: #ffebee;
+      color: #b71c1c;
+    }
+
+    .faq {
+      background: white;
+      margin-top: 25px;
+      padding: 22px;
+      border-radius: 12px;
+    }
+
+    .faq h2 {
+      color: #c2185b;
+      margin-bottom: 15px;
+    }
+
+    .faq-item {
+      padding: 13px 0;
+      border-bottom: 1px solid #eee;
+      line-height: 1.5;
+    }
+
+    .faq-item:last-child {
+      border-bottom: none;
+    }
+
+    .faq-item h3 {
+      font-size: 15px;
+      margin-bottom: 6px;
+    }
+
+    .faq-item p {
+      font-size: 14px;
+      color: #777;
+    }
+
+    footer {
+      text-align: center;
+      padding: 25px 15px;
+      color: #888;
+      font-size: 13px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>Mubeezi Dating</h1>
+    <p>Connecting Hearts Worldwide</p>
+  </header>
+
+  <main class="container">
+
+    <a href="settings.html" class="back-link">← Back to Settings</a>
+
+    <section class="intro">
+      <h2>How Can We Help You?</h2>
+      <p>
+        Our support team is here to help with your account, payments,
+        profile, subscriptions, safety and other questions.
+      </p>
+      <p style="margin-top:8px;color:#c2185b;font-weight:bold;">
+        Support availability: 24 hours a day, 7 days a week.
+      </p>
+    </section>
+
+    <section class="support-options">
+
+      <div class="option">
+        <div class="icon">✉️</div>
+        <h3>Email Support</h3>
+        <p>Contact our support team by email.</p>
+        <a href="mailto:support@mubeezi.com">Email Support</a>
+      </div>
+
+      <div class="option">
+        <div class="icon">💬</div>
+        <h3>Live Chat</h3>
+        <p>Live chat support will be available when connected.</p>
+        <a href="#supportForm">Send a Message</a>
+      </div>
+
+      <div class="option">
+        <div class="icon">❓</div>
+        <h3>Frequently Asked Questions</h3>
+        <p>Find answers to common questions below.</p>
+        <a href="#faq">View FAQs</a>
+      </div>
+
+    </section>
+
+    <section class="support-form" id="supportForm">
+      <h2>Send Us a Message</h2>
+
+      <form id="supportFormElement">
+
+        <label for="name">Your Name</label>
+        <input type="text" id="name" required placeholder="Enter your name">
+
+        <label for="email">Email Address</label>
+        <input type="email" id="email" required placeholder="Enter your email">
+
+        <label for="category">What Do You Need Help With?</label>
+        <select id="category" required>
+          <option value="">Select a topic</option>
+          <option value="Account">Account problems</option>
+          <option value="Profile">Profile problems</option>
+          <option value="Login">Login and registration</option>
+          <option value="Payments">Payments and subscriptions</option>
+          <option value="Safety">Safety and blocked members</option>
+          <option value="Messages">Messages and matches</option>
+          <option value="Technical">Technical problems</option>
+          <option value="Other">Other</option>
+        </select>
+
+        <label for="subject">Subject</label>
+        <input type="text" id="subject" required placeholder="Briefly describe your issue">
+
+        <label for="message">Your Message</label>
+        <textarea id="message" required placeholder="Explain how we can help you..."></textarea>
+
+        <button type="submit" id="submitButton">Send Support Request</button>
+
+        <div id="formMessage" class="message"></div>
+
+      </form>
+    </section>
+
+    <section class="faq" id="faq">
+      <h2>Frequently Asked Questions</h2>
+
+      <div class="faq-item">
+        <h3>How do I create an account?</h3>
+        <p>Open the registration page, provide your details and complete your profile. Mubeezi Dating is for adults aged 18 and above.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>How do I change my profile information?</h3>
+        <p>Open your profile and select Edit Profile to update your information.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>How do I block someone?</h3>
+        <p>Open the member's profile and use the Block option if available. You can manage blocked members through Settings.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>How do I cancel Premium?</h3>
+        <p>Open Subscription Management and follow the cancellation instructions for your subscription.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>Can I delete my account?</h3>
+        <p>Yes. You can request account deletion through the Account Deletion page in your settings.</p>
+      </div>
+
+      <div class="faq-item">
+        <h3>How do I report an unsafe member?</h3>
+        <p>Contact support and provide the relevant profile details and a description of your concern.</p>
+      </div>
+
+    </section>
+
+  </main>
+
+  <footer>
+    © 2026 Mubeezi Dating. Connecting Hearts Worldwide.
+  </footer>
+
+  <script>
+    const SUPABASE_URL = "https://xxtlcdvuiyrdufzvzeob.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU";
+
+    const supabaseClient = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY
+    );
+
+    const form = document.getElementById("supportFormElement");
+    const submitButton = document.getElementById("submitButton");
+    const formMessage = document.getElementById("formMessage");
+
+    async function loadMemberDetails() {
+      const { data } = await supabaseClient.auth.getUser();
+
+      if (!data.user) return;
+
+      document.getElementById("email").value =
+        data.user.email || "";
+
+      const { data: profile } = await supabaseClient
+        .from("profiles")
+        .select("display_name, full_name")
+        .eq("id", data.user.id)
+        .maybeSingle();
+
+      if (profile) {
+        document.getElementById("name").value =
+          profile.display_name || profile.full_name || "";
+      }
+    }
+
+    form.addEventListener("submit", async function(event) {
+      event.preventDefault();
+
+      submitButton.disabled = true;
+      submitButton.textContent = "Sending...";
+
+      formMessage.className = "message";
+      formMessage.style.display = "none";
+
+      const { data: authData } = await supabaseClient.auth.getUser();
+
+      const request = {
+        user_id: authData.user ? authData.user.id : null,
+        name: document.getElementById("name").value.trim(),
+        email: document.getElementById("email").value.trim(),
+        category: document.getElementById("category").value,
+        subject: document.getElementById("subject").value.trim(),
+        message: document.getElementById("message").value.trim()
+      };
+
+      const { error } = await supabaseClient
+        .from("support_requests")
+        .insert(request);
+
+      if (error) {
+        console.error("Support request error:", error);
+
+        formMessage.textContent =
+          "Your request could not be submitted. Please try again later or contact support by email.";
+
+        formMessage.className = "message error";
+      } else {
+        formMessage.textContent =
+          "Your support request has been submitted successfully. Thank you for contacting Mubeezi Dating.";
+
+        formMessage.className = "message success";
+        form.reset();
+        loadMemberDetails();
+      }
+
+      submitButton.disabled = false;
+      submitButton.textContent = "Send Support Request";
+    });
+
+    loadMemberDetails();
+  </script>
+
+</body>
+</html>
+

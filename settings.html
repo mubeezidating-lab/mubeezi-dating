@@ -1,1 +1,222 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings | Mubeezi Dating</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#fff5f7;color:#333}
+header{background:#e91e63;color:white;padding:20px;text-align:center}
+header h1{margin:0}
+header p{margin:6px 0 0}
+nav{background:white;padding:12px;text-align:center;box-shadow:0 2px 6px #ddd}
+nav a{display:inline-block;margin:5px 9px;color:#d81b60;text-decoration:none;font-weight:bold;font-size:14px}
+.container{max-width:700px;margin:25px auto;padding:15px}
+.card{background:white;padding:25px;border-radius:15px;box-shadow:0 3px 15px #00000012;margin-bottom:20px}
+h2{color:#c2185b;margin-top:0}
+.setting{display:flex;justify-content:space-between;align-items:center;gap:15px;padding:17px 0;border-bottom:1px solid #eee}
+.setting:last-child{border-bottom:0}
+.setting strong{display:block;margin-bottom:5px}
+.setting small{color:#888;line-height:1.5}
+input[type=checkbox]{width:23px;height:23px;accent-color:#e91e63;cursor:pointer;flex-shrink:0}
+button{padding:12px 20px;border:0;border-radius:22px;background:#e91e63;color:white;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.6}
+.danger{background:#c62828}
+.links a{display:block;padding:13px 0;color:#d81b60;text-decoration:none;border-bottom:1px solid #eee;font-weight:bold}
+.status{margin-top:14px;color:#777;white-space:pre-wrap}
+.error{color:#c62828}
+.success{color:#16803c}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>❤️ Mubeezi Dating</h1>
+<p>Connecting Hearts Worldwide</p>
+</header>
+
+<nav>
+<a href="home.html">Home</a>
+<a href="discover.html">Discover</a>
+<a href="my-profile.html">My Profile</a>
+<a href="messages.html">Messages</a>
+<a href="premium.html">Premium</a>
+</nav>
+
+<div class="container">
+
+<div class="card">
+<h2>⚙️ Account Settings</h2>
+
+<div class="setting">
+<div>
+<strong>Profile Visibility</strong>
+<small>Allow other members to discover your profile.</small>
+</div>
+<input type="checkbox" id="profileVisible">
+</div>
+
+<div class="setting">
+<div>
+<strong>Online Status</strong>
+<small>Allow other members to see when you are online.</small>
+</div>
+<input type="checkbox" id="onlineStatus">
+</div>
+
+<div class="setting">
+<div>
+<strong>Read Receipts</strong>
+<small>Allow people you message to see when you have read their messages.</small>
+</div>
+<input type="checkbox" id="readReceipts">
+</div>
+
+<button id="saveButton">Save Settings</button>
+<div id="status" class="status">Loading your settings...</div>
+</div>
+
+<div class="card">
+<h2>🔐 Privacy and Account</h2>
+<div class="links">
+<a href="blocked-members.html">Blocked Members</a>
+<a href="profile-verification.html">Profile Verification</a>
+<a href="subscription-management.html">Subscription Management</a>
+<a href="privacy-policy.html">Privacy Policy</a>
+<a href="account-deletion.html">Delete My Account</a>
+</div>
+</div>
+
+<div class="card">
+<h2>Sign Out</h2>
+<p>Sign out of your Mubeezi Dating account on this device.</p>
+<button id="logoutButton" class="danger">Sign Out</button>
+</div>
+
+</div>
+
+<script>
+const SUPABASE_URL = "https://xxtlcdvuiyrdufzvzeob.supabase.co";
+const SUPABASE_KEY = "sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU";
+
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const statusBox = document.getElementById("status");
+const saveButton = document.getElementById("saveButton");
+
+let currentUser = null;
+
+function showStatus(message, type = "") {
+    statusBox.textContent = message;
+    statusBox.className = "status " + type;
+}
+
+async function loadSettings() {
+    try {
+        const { data: sessionData, error: sessionError } =
+            await db.auth.getSession();
+
+        if (sessionError) throw sessionError;
+
+        currentUser = sessionData.session?.user;
+
+        if (!currentUser) {
+            location.href = "login.html";
+            return;
+        }
+
+        const { data, error } = await db
+            .from("profiles")
+            .select("profile_visible,online_status,read_receipts")
+            .eq("id", currentUser.id)
+            .maybeSingle();
+
+        if (error) throw error;
+
+        if (!data) {
+            showStatus("Your profile was not found. Complete your profile first.", "error");
+            saveButton.disabled = true;
+            return;
+        }
+
+        document.getElementById("profileVisible").checked =
+            data.profile_visible ?? false;
+
+        // These default to ON, as chosen for Mubeezi Dating.
+        document.getElementById("onlineStatus").checked =
+            data.online_status ?? true;
+
+        document.getElementById("readReceipts").checked =
+            data.read_receipts ?? true;
+
+        showStatus("Your settings are ready.");
+
+    } catch (error) {
+        console.error("Settings loading error:", error);
+        showStatus(
+            "We couldn't load your settings. Check that your profiles table has the required columns and permissions.",
+            "error"
+        );
+        saveButton.disabled = true;
+    }
+}
+
+saveButton.addEventListener("click", async () => {
+    if (!currentUser) return;
+
+    saveButton.disabled = true;
+    showStatus("Saving your settings...");
+
+    try {
+        const updates = {
+            profile_visible: document.getElementById("profileVisible").checked,
+            online_status: document.getElementById("onlineStatus").checked,
+            read_receipts: document.getElementById("readReceipts").checked
+        };
+
+        const { error } = await db
+            .from("profiles")
+            .update(updates)
+            .eq("id", currentUser.id);
+
+        if (error) throw error;
+
+        showStatus("Your settings have been saved successfully! ❤️", "success");
+
+    } catch (error) {
+        console.error("Settings saving error:", error);
+        showStatus(
+            "We couldn't save your settings. Confirm that online_status and read_receipts columns exist and your update policy permits these changes.",
+            "error"
+        );
+    } finally {
+        saveButton.disabled = false;
+    }
+});
+
+document.getElementById("logoutButton").addEventListener("click", async () => {
+    const confirmed = confirm("Are you sure you want to sign out?");
+
+    if (!confirmed) return;
+
+    const { error } = await db.auth.signOut();
+
+    if (error) {
+        alert("Unable to sign out. Please try again.");
+        console.error(error);
+        return;
+    }
+
+    location.href = "login.html";
+});
+
+loadSettings();
+</script>
+
+</body>
+</html>

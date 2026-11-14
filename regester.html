@@ -25,14 +25,15 @@
     .toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);border:0;background:none;color:var(--pink);font-weight:700;cursor:pointer}
     .hint{font-size:12px;color:var(--muted);margin:7px 0 0;line-height:1.45}
     .terms{display:flex;gap:9px;align-items:flex-start;margin:18px 0;color:var(--muted);font-size:12px;line-height:1.5}
-    .terms input{margin-top:2px;accent-color:var(--pink)}
+    .terms input{margin-top:2px;accent-color:var(--pink);flex-shrink:0}
     a{color:var(--pink);text-decoration:none;font-weight:700}
     a:hover{text-decoration:underline}
     .submit{width:100%;height:49px;border:0;border-radius:12px;background:linear-gradient(90deg,var(--red),var(--pink));color:#fff;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 8px 18px #e91e6330}
     .submit:disabled{opacity:.65;cursor:wait}
-    .message{display:none;margin-top:15px;padding:12px;border-radius:10px;font-size:13px;line-height:1.5}
+    .message{display:none;margin-top:15px;padding:12px;border-radius:10px;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
     .message.error{display:block;background:#fff0f1;color:#a4142d;border:1px solid #ffd2d9}
     .message.success{display:block;background:#effaf3;color:#176b37;border:1px solid #c9efd5}
+    .message.info{display:block;background:#fff8e8;color:#77520a;border:1px solid #f4dfaa}
     .bottom{text-align:center;margin:19px 0 0;color:var(--muted);font-size:14px}
     .legal{text-align:center;color:#887d85;font-size:11px;margin:18px 0 0;line-height:1.5}
     @media(max-width:480px){body{padding:16px}.panel{padding:23px 20px;border-radius:18px}.brand h1{font-size:22px}}
@@ -69,7 +70,7 @@
 
         <label class="terms">
           <input id="terms" type="checkbox" required>
-          <span>I agree to the <a href="terms.html" target="_blank" rel="noopener">Terms and Conditions</a> and <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>. I confirm that I am at least 18 years old.</span>
+          <span>I agree to the <a href="terms-and-conditions.html" target="_blank" rel="noopener">Terms and Conditions</a> and <a href="privacy-policy.html" target="_blank" rel="noopener">Privacy Policy</a>. I confirm that I am at least 18 years old.</span>
         </label>
 
         <button class="submit" id="submitButton" type="submit">Create account</button>
@@ -81,79 +82,128 @@
     <p class="legal">Please use your own email address. You may need to confirm your email before signing in.</p>
   </main>
 
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+  <!-- Load the standard browser build so the Supabase client is available as window.supabase. -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    (function () {
+      "use strict";
 
-    const SUPABASE_URL = "https://xxtlcdvuiyrdufzvzeob.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU";
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const SUPABASE_URL = "https://xxtlcdvuiyrdufzvzeob.supabase.co";
+      const SUPABASE_KEY = "sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU";
 
-    const form = document.getElementById("registerForm");
-    const button = document.getElementById("submitButton");
-    const message = document.getElementById("message");
+      const form = document.getElementById("registerForm");
+      const button = document.getElementById("submitButton");
+      const message = document.getElementById("message");
 
-    document.querySelectorAll(".toggle").forEach(toggle => {
-      toggle.addEventListener("click", () => {
-        const field = document.getElementById(toggle.dataset.target);
-        const reveal = field.type === "password";
-        field.type = reveal ? "text" : "password";
-        toggle.textContent = reveal ? "Hide" : "Show";
-      });
-    });
-
-    function showMessage(text, type) {
-      message.textContent = text;
-      message.className = "message " + type;
-    }
-
-    form.addEventListener("submit", async event => {
-      event.preventDefault();
-      message.className = "message";
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value;
-      const confirmPassword = document.getElementById("confirmPassword").value;
-
-      if (password.length < 8) {
-        showMessage("Your password must contain at least 8 characters.", "error");
-        return;
-      }
-      if (password !== confirmPassword) {
-        showMessage("The passwords do not match. Please check them.", "error");
-        return;
-      }
-      if (!document.getElementById("terms").checked) {
-        showMessage("Please agree to the Terms and confirm that you are at least 18.", "error");
-        return;
+      function showMessage(text, type) {
+        message.textContent = text;
+        message.className = "message " + type;
+        message.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
 
-      button.disabled = true;
-      button.textContent = "Creating account…";
+      function setBusy(busy) {
+        button.disabled = busy;
+        button.textContent = busy ? "Creating account..." : "Create account";
+      }
 
-      try {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: window.location.origin + "/login.html",
-            data: { registration_method: "email" }
-          }
+      document.querySelectorAll(".toggle").forEach(function (toggle) {
+        toggle.addEventListener("click", function () {
+          const field = document.getElementById(toggle.dataset.target);
+          const reveal = field.type === "password";
+          field.type = reveal ? "text" : "password";
+          toggle.textContent = reveal ? "Hide" : "Show";
         });
-        if (error) throw error;
+      });
 
-        if (data.session) {
-          window.location.href = "complete-profile.html";
+      form.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        message.className = "message";
+        message.textContent = "";
+
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
+        const confirmPassword = document.getElementById("confirmPassword").value;
+        const termsAccepted = document.getElementById("terms").checked;
+
+        if (!email) {
+          showMessage("Please enter your email address.", "error");
+          return;
+        }
+        if (password.length < 8) {
+          showMessage("Your password must contain at least 8 characters.", "error");
+          return;
+        }
+        if (password !== confirmPassword) {
+          showMessage("The passwords do not match. Please check them.", "error");
+          return;
+        }
+        if (!termsAccepted) {
+          showMessage("Please agree to the Terms and confirm that you are at least 18.", "error");
           return;
         }
 
-        showMessage("Your account has been created. Check your email and click the confirmation link. After confirming, return here to log in and complete your profile.", "success");
-        form.reset();
-      } catch (error) {
-        showMessage(error.message || "We could not create your account. Please try again.", "error");
-      } finally {
-        button.disabled = false;
-        button.textContent = "Create account";
+        if (!window.supabase || typeof window.supabase.createClient !== "function") {
+          showMessage("The registration service could not load. Check your internet connection, refresh this page, and try again.", "error");
+          return;
+        }
+
+        setBusy(true);
+        showMessage("Connecting securely to Mubeezi Dating...", "info");
+
+        try {
+          const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+          // Resolve relative to this page so the link works on both a domain root
+          // and a GitHub Pages project path.
+          const emailRedirectTo = new URL("login.html", window.location.href).href;
+
+          const result = await supabase.auth.signUp({
+            email: email,
+            password: password,
+            options: {
+              emailRedirectTo: emailRedirectTo,
+              data: { registration_method: "email" }
+            }
+          });
+
+          if (result.error) throw result.error;
+
+          if (result.data && result.data.session) {
+            showMessage("Your account has been created. Taking you to profile completion...", "success");
+            window.location.href = new URL("complete-profile.html", window.location.href).href;
+            return;
+          }
+
+          showMessage(
+            "Your account request was received. Check your email and click the confirmation link. After confirming your email, return to Mubeezi Dating and log in to complete your profile. If the email does not arrive, check your spam folder.",
+            "success"
+          );
+          form.reset();
+
+        } catch (error) {
+          console.error("Mubeezi registration error:", error);
+          let friendlyMessage = error && error.message ? error.message : "We could not create your account. Please try again.";
+
+          if (/already registered|already exists|user already/i.test(friendlyMessage)) {
+            friendlyMessage = "An account may already exist with this email address. Please log in instead, or use the password recovery option.";
+          } else if (/password should be|weak password|password is too/i.test(friendlyMessage)) {
+            friendlyMessage = "Supabase rejected this password. Please choose a stronger password and try again.";
+          } else if (/fetch|network|failed to/i.test(friendlyMessage)) {
+            friendlyMessage = "We could not reach the registration service. Check your internet connection and try again.";
+          }
+
+          showMessage(friendlyMessage, "error");
+        } finally {
+          setBusy(false);
+        }
+      });
+
+      // If the external Supabase script was blocked, make the cause visible.
+      if (!window.supabase || typeof window.supabase.createClient !== "function") {
+        showMessage("Registration service is not available yet. Check your internet connection and reload this page.", "error");
       }
-    });
+    })();
   </script>
 </body>
 </html>

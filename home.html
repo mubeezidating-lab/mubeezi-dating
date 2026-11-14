@@ -71,10 +71,9 @@
         <select class="country-filter" id="countryFilter" aria-label="Filter profiles by country">
           <option value="">All countries</option>
         </select>
-        <nav class="top-buttons" aria-label="Member navigation" id="memberNavigation">
+        <nav class="top-buttons" aria-label="Main navigation">
           <a class="btn btn-outline" href="discover.html">Discover</a>
-          <a class="btn btn-outline" href="login.html">Login</a>
-          <a class="btn btn-primary" href="register.html">Join</a>
+          <a class="btn btn-primary" href="premium.html">Premium</a>
         </nav>
       </div>
     </div>
@@ -93,25 +92,6 @@
     </section>
   </main>
 
-
-  <section class="intro-backdrop" id="firstVisitIntro" role="dialog" aria-modal="true" aria-labelledby="introTitle">
-    <div class="intro-panel">
-      <h2 id="introTitle">Welcome to Mubeezi Dating</h2>
-      <p>Create your profile in five simple steps. Sign in first so your answers and photos can be saved securely to your Mubeezi account.</p>
-      <div class="intro-steps">
-        <div class="intro-step"><span class="intro-step-number">1</span><div><strong>About you</strong><span>Age/date of birth, country, gender and religion.</span></div></div>
-        <div class="intro-step"><span class="intro-step-number">2</span><div><strong>Your lifestyle</strong><span>Whether you drink or smoke.</span></div></div>
-        <div class="intro-step"><span class="intro-step-number">3</span><div><strong>Who you want to meet</strong><span>Preferred gender, relationship type and age range.</span></div></div>
-        <div class="intro-step"><span class="intro-step-number">4</span><div><strong>Skin tone preferences</strong><span>Your skin tone and preferred skin tone.</span></div></div>
-        <div class="intro-step"><span class="intro-step-number">5</span><div><strong>Your photos</strong><span>Upload a profile photo and a full photo.</span></div></div>
-      </div>
-      <div class="intro-actions">
-        <a class="btn btn-primary" href="complete-profile.html">Start profile steps</a>
-        <button class="btn btn-outline" type="button" id="closeIntro">Explore first</button>
-      </div>
-    </div>
-  </section>
-
   <footer>
     <div class="container">
       <div class="footer-top">
@@ -120,12 +100,12 @@
           <p>Connecting Hearts Worldwide. Discover people and build meaningful connections.</p>
         </div>
         <nav class="footer-links" aria-label="Footer navigation">
-          <a href="about.html">About Us</a>
-          <a href="contact.html">Contact</a>
-          <a href="privacy.html">Privacy Policy</a>
-          <a href="terms.html">Terms &amp; Conditions</a>
-          <a href="guidelines.html">Community Guidelines</a>
-          <a href="support.html">Help &amp; Support</a>
+          <a href="about-us.html">About Us</a>
+          <a href="contact-us.html">Contact</a>
+          <a href="privacy-policy.html">Privacy Policy</a>
+          <a href="terms-and-conditions.html">Terms &amp; Conditions</a>
+          <a href="community-guidelines.html">Community Guidelines</a>
+          <a href="help-support.html">Help &amp; Support</a>
         </nav>
       </div>
       <div class="copyright">&copy; <span id="currentYear"></span> Mubeezi Dating. All rights reserved. Connecting Hearts Worldwide.</div>
@@ -141,7 +121,6 @@
     const grid = document.getElementById("featuredProfiles");
     const status = document.getElementById("profilesStatus");
     const countryFilter = document.getElementById("countryFilter");
-    const intro = document.getElementById("firstVisitIntro");
     document.getElementById("currentYear").textContent = new Date().getFullYear();
 
     // Populate the country dropdown independently of the profiles returned by Supabase.
@@ -157,21 +136,6 @@
         countryFilter.appendChild(option);
       });
 
-    const memberNavigation = document.getElementById("memberNavigation");
-    const closeIntroButton = document.getElementById("closeIntro");
-
-    if (closeIntroButton && intro) {
-      closeIntroButton.addEventListener("click", () => {
-        localStorage.setItem("mubeezi_intro_seen", "yes");
-        intro.classList.remove("open");
-      });
-    }
-    if (intro) {
-      const startProfileLink = intro.querySelector('a[href="complete-profile.html"]');
-      if (startProfileLink) startProfileLink.addEventListener("click", () => {
-        localStorage.setItem("mubeezi_intro_seen", "yes");
-      });
-    }
     countryFilter.addEventListener("change", loadProfiles);
 
     function escapeHtml(value = "") {
@@ -240,45 +204,10 @@
       status.textContent = `${allProfiles.length} member profile${allProfiles.length === 1 ? "" : "s"} shown.`;
     }
 
-    async function initializeHomepage() {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) console.warn("Could not read sign-in session:", sessionError);
-
-      if (session) {
-        // Hide registration/login/discover navigation once the visitor is signed in.
-        if (memberNavigation) memberNavigation.hidden = true;
-
-        // A signed-in member who has not finished onboarding should complete their profile.
-        const { data: ownProfile, error: ownProfileError } = await supabase
-          .from("profiles")
-          .select("onboarding_completed,profile_completed")
-          .eq("id", session.user.id)
-          .maybeSingle();
-
-        if (!ownProfileError && ownProfile &&
-            ownProfile.onboarding_completed !== true &&
-            ownProfile.profile_completed !== true) {
-          window.location.replace("complete-profile.html");
-          return;
-        }
-
-        // Do not show the first-visitor introduction again to registered members.
-        if (intro) intro.classList.remove("open");
-        localStorage.setItem("mubeezi_intro_seen", "yes");
-      } else {
-        // Show the introduction only to a first-time visitor on this browser.
-        if (intro && !localStorage.getItem("mubeezi_intro_seen")) {
-          intro.classList.add("open");
-        }
-      }
-
-      await loadProfiles();
-    }
-
-    initializeHomepage().catch(error => {
+    loadProfiles().catch(error => {
       console.error("Mubeezi homepage initialization error:", error);
       grid.innerHTML = "";
-      status.textContent = "Something went wrong while loading the homepage. Please refresh the page.";
+      status.textContent = "Something went wrong while loading the homepage: " + error.message;
     });
   </script>
 </body>

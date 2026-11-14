@@ -74,6 +74,7 @@
         <nav class="top-buttons" aria-label="Main navigation">
           <a class="btn btn-outline" href="discover.html">Discover</a>
           <a class="btn btn-primary" href="premium.html">Premium</a>
+          <a class="btn btn-outline" href="register.html" id="myAccountButton">My Account</a>
         </nav>
       </div>
     </div>
@@ -112,29 +113,53 @@
     </div>
   </footer>
 
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
-
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
     const SUPABASE_URL = "https://xxtlcdvuiyrdufzvzeob.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU";
-    const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+    // My Account opens the member's own profile when signed in,
+    // or the registration page when no signed-in session exists.
+    const myAccountButton = document.getElementById("myAccountButton");
+    myAccountButton.addEventListener("click", async function(event) {
+      event.preventDefault();
+      myAccountButton.textContent = "Checking account...";
+      myAccountButton.setAttribute("aria-busy", "true");
+
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
+
+        const destination = data.session ? "my-profile.html" : "register.html";
+        window.location.href = new URL(destination, window.location.href).href;
+      } catch (error) {
+        console.error("My Account check failed:", error);
+        myAccountButton.textContent = "My Account";
+        myAccountButton.removeAttribute("aria-busy");
+        alert("We could not check your account right now. Please check your internet connection and try again.");
+      }
+    });
     const grid = document.getElementById("featuredProfiles");
     const status = document.getElementById("profilesStatus");
     const countryFilter = document.getElementById("countryFilter");
     document.getElementById("currentYear").textContent = new Date().getFullYear();
 
-    // Populate the country dropdown independently of the profiles returned by Supabase.
-    const countryCodes = "AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW".split(" ");
+    // Build the country list independently from the database, so it is always available.
+    // ISO country codes also let the filter match database values such as "UG" or "Uganda".
+    const countryCodes = `AD AE AF AG AI AL AM AO AQ AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BV BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS YE YT ZA ZM ZW`.split(/\s+/);
     const countryNames = new Intl.DisplayNames(["en"], { type: "region" });
-    countryCodes.map(code => ({ code, name: countryNames.of(code) }))
+    const countries = countryCodes
+      .map(code => ({ code, name: countryNames.of(code) || code }))
       .filter(item => item.name && item.name !== item.code)
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .forEach(item => {
-        const option = document.createElement("option");
-        option.value = item.name;
-        option.textContent = item.name;
-        countryFilter.appendChild(option);
-      });
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    countries.forEach(item => {
+      const option = document.createElement("option");
+      option.value = item.code;
+      option.textContent = item.name;
+      countryFilter.appendChild(option);
+    });
 
     countryFilter.addEventListener("change", loadProfiles);
 
@@ -145,7 +170,7 @@
     function makeCard(profile) {
       const name = profile.display_name || profile.full_name || "Mubeezi Member";
       const photo = profile.profile_photo;
-      const age = profile.age ? `, ${profile.age}` : "";
+      const age = "";
       const country = profile.country || "";
       const initial = escapeHtml(name.charAt(0).toUpperCase());
       const photoMarkup = photo
@@ -157,33 +182,37 @@
       </article>`;
     }
 
-    async function loadProfiles() {
-      status.textContent = "Loading all member profiles...";
-      grid.innerHTML = "";
+    function countryMatches(profileCountry, selectedCode) {
+      if (!selectedCode) return true;
+      const value = String(profileCountry || "").trim();
+      if (!value) return false;
+      const selected = countries.find(item => item.code === selectedCode);
+      return value.toUpperCase() === selectedCode ||
+        value.toLocaleLowerCase() === (selected ? selected.name.toLocaleLowerCase() : "");
+    }
 
-      // Fetch in pages so the homepage is not restricted to only four profiles.
-      // Supabase commonly caps a single response, so request successive ranges.
+    async function loadProfiles() {
+      status.textContent = "Loading member profiles...";
+      grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#777;padding:24px">Loading member profiles...</p>';
+
+      // Request only fields intended for public profile cards. Supabase Row Level
+      // Security (RLS) remains responsible for deciding which profiles are public.
       const pageSize = 500;
       let offset = 0;
       let allProfiles = [];
 
       while (true) {
-        let profileQuery = supabase.from("profiles")
-          .select("id,display_name,full_name,age,country,profile_photo,created_at")
-          .eq("profile_visible", true)
-          .eq("is_active", true)
-          .eq("profile_completed", true)
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("id,display_name,full_name,country,profile_photo,created_at")
           .order("created_at", { ascending: false })
           .range(offset, offset + pageSize - 1);
 
-        // If a country is selected, return every visible profile matching that country.
-        if (countryFilter.value) profileQuery = profileQuery.eq("country", countryFilter.value);
-
-        const { data, error } = await profileQuery;
         if (error) {
           console.error("Mubeezi profile loading error:", error);
           grid.innerHTML = "";
-          status.textContent = "Member profiles could not be loaded. Check the profiles table permissions and column names in Supabase.";
+          status.textContent = "Profiles could not be loaded: " + (error.message || "Supabase access error") +
+            ". Check that the profiles table allows signed-out visitors to read public profile-card fields through its Row Level Security policy.";
           return;
         }
 
@@ -193,15 +222,20 @@
         offset += pageSize;
       }
 
-      if (allProfiles.length === 0) {
-        status.textContent = countryFilter.value
-          ? `No visible member profiles from ${countryFilter.value} yet.`
-          : "No completed member profiles are available to display yet.";
+      const selectedCountry = countryFilter.value;
+      const visibleProfiles = allProfiles.filter(profile =>
+        countryMatches(profile.country, selectedCountry)
+      );
+
+      if (visibleProfiles.length === 0) {
+        status.textContent = selectedCountry
+          ? `No public profiles from ${countries.find(item => item.code === selectedCountry)?.name || selectedCountry} are available.`
+          : "No public profiles are available to display yet. Check the profiles table and its public-read policy in Supabase.";
         return;
       }
 
-      grid.innerHTML = allProfiles.map(makeCard).join("");
-      status.textContent = `${allProfiles.length} member profile${allProfiles.length === 1 ? "" : "s"} shown.`;
+      grid.innerHTML = visibleProfiles.map(makeCard).join("");
+      status.textContent = `${visibleProfiles.length} public profile${visibleProfiles.length === 1 ? "" : "s"} shown.`;
     }
 
     loadProfiles().catch(error => {

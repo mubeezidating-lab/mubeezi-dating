@@ -12,11 +12,11 @@
     a{color:inherit;text-decoration:none}
     .container{width:min(1050px,92%);margin:auto}
     header{background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
-    .topbar{min-height:70px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-    .logo{font-size:23px;font-weight:900;color:var(--red);letter-spacing:-.5px}
+    .topbar{min-height:70px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0}
+    .logo{font-size:23px;font-weight:900;color:var(--red);letter-spacing:-.5px;white-space:nowrap}
     .logo span{color:var(--ink)}
-    .nav{display:flex;gap:9px;flex-wrap:wrap}
-    .btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:25px;padding:11px 19px;font-weight:700;font-size:14px;cursor:pointer;transition:.2s}
+    .nav{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:nowrap;white-space:nowrap}
+    .btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:25px;padding:10px 15px;font-weight:700;font-size:10px;line-height:1.2;cursor:pointer;transition:.2s;white-space:nowrap}
     .btn-primary{background:var(--red);color:#fff}
     .btn-primary:hover{background:var(--deep)}
     .btn-outline{background:#fff;border:1px solid var(--red);color:var(--red)}
@@ -41,7 +41,8 @@
     .bio{font-size:15px;margin:0 0 22px;white-space:pre-wrap}
     .like-panel{background:var(--pink);border:1px solid #f8d4e2;border-radius:14px;padding:16px;margin:20px 0}
     .like-panel p{font-size:13px;color:#6e5963;margin-bottom:10px}
-    .like-btn{width:100%;font-size:16px;padding:13px}
+    .like-btn,.message-btn{width:100%;font-size:15px;padding:13px}
+    .message-btn{margin-top:10px}
     .like-message{font-size:13px;color:var(--deep);font-weight:700;margin-top:9px;min-height:18px}
     .section-title{font-size:17px;margin:22px 0 12px}
     .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -52,8 +53,24 @@
     .tag{background:#fff0f5;border:1px solid #f8d4e2;color:#a81750;padding:6px 10px;border-radius:20px;font-size:13px}
     footer{background:#261d24;color:#eee;padding:25px 0;text-align:center;font-size:13px}
     footer a{color:#ffd5e4;margin:0 8px}
-    @media(max-width:760px){.profile-layout{grid-template-columns:1fr;gap:16px}.main-photo-wrap{height:min(115vw,480px)}.details{padding:20px}.topbar{padding:10px 0}.logo{font-size:20px}}
-    @media(max-width:380px){.info-grid{grid-template-columns:1fr}h1{font-size:25px}.btn{padding:10px 14px}}
+    @media(max-width:760px){
+      .profile-layout{grid-template-columns:1fr;gap:16px}
+      .main-photo-wrap{height:min(115vw,480px)}
+      .details{padding:20px}
+      .topbar{min-height:62px;gap:8px}
+      .logo{font-size:19px}
+      .nav{gap:6px}
+      .nav .btn{font-size:10px;padding:9px 12px}
+    }
+    @media(max-width:380px){
+      .container{width:94%}
+      .topbar{gap:5px}
+      .logo{font-size:17px;letter-spacing:-.7px}
+      .nav{gap:4px}
+      .nav .btn{font-size:10px;padding:8px 9px}
+      .info-grid{grid-template-columns:1fr}
+      h1{font-size:25px}
+    }
   </style>
 </head>
 <body>
@@ -61,8 +78,8 @@
   <div class="container topbar">
     <a class="logo" href="home.html">MUBEEZI <span>DATING</span></a>
     <nav class="nav" aria-label="Main navigation">
-      <a class="btn btn-outline" href="home.html">Home</a>
-      <a class="btn btn-outline" href="discover.html">Discover</a>
+      <a class="btn btn-primary" href="home.html">Home</a>
+      <a class="btn btn-primary" href="discover.html">Discover</a>
       <a class="btn btn-primary" href="login.html">Login</a>
     </nav>
   </div>
@@ -91,6 +108,7 @@
       <div class="like-panel">
         <p>Interested in this person? Let them know you would like to connect.</p>
         <button class="btn btn-primary like-btn" id="likeButton" type="button">♥ Like this profile</button>
+        <button class="btn btn-primary message-btn" id="messageButton" type="button">✉ Message</button>
         <div class="like-message" id="likeMessage" aria-live="polite"></div>
       </div>
 
@@ -124,10 +142,6 @@
 
   const $ = (id) => document.getElementById(id);
   $("year").textContent = new Date().getFullYear();
-
-  const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, ch => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-  })[ch]);
 
   function toList(value) {
     if (Array.isArray(value)) return value.filter(Boolean).map(String);
@@ -290,6 +304,34 @@
     });
   }
 
+  async function setupMessage(profileId) {
+    const button = $("messageButton");
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    if (error) console.warn("Could not check login state:", error);
+
+    if (!user) {
+      button.textContent = "Login to Message";
+      button.addEventListener("click", () => {
+        const chatUrl = "messages.html?user=" + encodeURIComponent(profileId);
+        location.href = "login.html?next=" + encodeURIComponent(chatUrl);
+      });
+      return;
+    }
+
+    if (user.id === profileId) {
+      button.disabled = true;
+      button.textContent = "This is your profile";
+      return;
+    }
+
+    button.addEventListener("click", () => {
+      button.disabled = true;
+      button.textContent = "Opening chat…";
+      location.href = "messages.html?user=" + encodeURIComponent(profileId);
+    });
+  }
+
   async function loadProfile() {
     const profileId = new URLSearchParams(location.search).get("id");
     if (!profileId) {
@@ -314,7 +356,7 @@
     }
 
     renderProfile(profile);
-    await setupLike(profile.id);
+    await Promise.all([setupLike(profile.id), setupMessage(profile.id)]);
   }
 
   loadProfile().catch(error => {

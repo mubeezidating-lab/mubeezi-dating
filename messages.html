@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,22 +20,26 @@ nav a{display:inline-block;margin:5px 9px;color:#d81b60;text-decoration:none;fon
 .top h2{margin:0;color:#c2185b}
 #conversationTitle{margin-top:7px;color:#777;font-size:14px}
 #chat{height:440px;overflow-y:auto;padding:18px;background:#fffafd}
-.bubble{max-width:78%;padding:11px 14px;margin:10px 0;border-radius:15px;overflow-wrap:anywhere}
+.bubble{max-width:78%;padding:11px 14px;margin:10px 0;border-radius:15px;overflow-wrap:anywhere;white-space:pre-wrap}
 .sent{background:#f8bbd0;margin-left:auto;border-bottom-right-radius:4px}
 .received{background:#f1f1f1;margin-right:auto;border-bottom-left-radius:4px}
 .time{display:block;font-size:10px;color:#777;margin-top:6px;text-align:right}
 .composer{display:flex;gap:9px;padding:14px;border-top:1px solid #eee}
-textarea{flex:1;resize:none;min-height:45px;max-height:120px;border:1px solid #ddd;border-radius:12px;padding:12px;font-family:inherit}
+textarea{flex:1;resize:none;min-height:45px;max-height:120px;border:1px solid #ddd;border-radius:12px;padding:12px;font-family:inherit;font-size:16px}
 button{border:0;border-radius:22px;padding:0 22px;background:#e91e63;color:white;font-weight:bold;cursor:pointer}
 button:disabled{opacity:.5;cursor:not-allowed}
 .status{padding:16px;text-align:center;color:#777}
 .error{color:#c62828}
-@media(max-width:500px){#chat{height:60vh}.composer{padding:10px}button{padding:0 15px}}
+#upgradePanel{display:none;margin:14px;padding:17px;background:#fff0f5;border:1px solid #f5b5cb;border-radius:12px;text-align:center}
+#upgradePanel h3{margin:0 0 8px;color:#c2185b}
+#upgradePanel p{margin:0 0 14px;line-height:1.45}
+#upgradeButton{display:inline-block;background:#e91e63;color:white;text-decoration:none;border-radius:24px;padding:13px 24px;font-weight:bold}
+#limitNotice{display:none;margin:0 14px 12px;padding:11px;border-radius:9px;background:#fff0f5;color:#ad1457;text-align:center;font-size:14px}
+@media(max-width:500px){#chat{height:60vh}.composer{padding:10px}button{padding:0 15px}nav a{font-size:12px;margin:4px 6px}}
 </style>
 </head>
 
 <body>
-
 <header>
 <h1>❤️ Mubeezi Dating</h1>
 <p>Connecting Hearts Worldwide</p>
@@ -53,7 +56,6 @@ button:disabled{opacity:.5;cursor:not-allowed}
 
 <div class="container">
 <div class="panel">
-
 <div class="top">
 <h2>💬 Messages</h2>
 <div id="conversationTitle">Choose a member to start a conversation.</div>
@@ -62,18 +64,23 @@ button:disabled{opacity:.5;cursor:not-allowed}
 <div id="status" class="status">Loading messages...</div>
 <div id="chat"></div>
 
+<div id="upgradePanel">
+    <h3>You've used your 2 free messages!</h3>
+    <p>Upgrade to Mubeezi Premium to continue chatting with unlimited messages.</p>
+    <a id="upgradeButton" href="premium.html">UPGRADE TO PREMIUM</a>
+</div>
+<div id="limitNotice">Your free message allowance has been used. Upgrade to continue chatting.</div>
+
 <form id="messageForm" class="composer">
-<textarea id="messageInput" placeholder="Write your message..." maxlength="5000" required></textarea>
+<textarea id="messageInput" placeholder="Write your message..." maxlength="5000" required aria-label="Write your message"></textarea>
 <button id="sendButton" type="submit">Send</button>
 </form>
-
 </div>
 </div>
 
 <script>
 const SUPABASE_URL = "https://xxtlcdvuiyrdufzvzeob.supabase.co";
 const SUPABASE_KEY = "sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU";
-
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const statusBox = document.getElementById("status");
@@ -81,11 +88,16 @@ const chatBox = document.getElementById("chat");
 const input = document.getElementById("messageInput");
 const sendButton = document.getElementById("sendButton");
 const titleBox = document.getElementById("conversationTitle");
+const upgradePanel = document.getElementById("upgradePanel");
+const limitNotice = document.getElementById("limitNotice");
 
 let currentUser = null;
 let otherUserId = new URLSearchParams(location.search).get("user");
 let otherUserName = "Member";
 let refreshTimer = null;
+let isPremium = false;
+let sentMessageCount = 0;
+let freeLimitReached = false;
 
 function showStatus(message, error = false) {
     statusBox.textContent = message;
@@ -95,17 +107,65 @@ function showStatus(message, error = false) {
 
 function escapeHTML(value) {
     return String(value ?? "").replace(/[&<>"']/g, char => ({
-        "&":"&amp;",
-        "<":"&lt;",
-        ">":"&gt;",
-        '"':"&quot;",
-        "'":"&#039;"
+        "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;"
     })[char]);
 }
 
 function formatTime(value) {
     if (!value) return "";
     return new Date(value).toLocaleString();
+}
+
+function showUpgrade() {
+    freeLimitReached = true;
+    upgradePanel.style.display = "block";
+    limitNotice.style.display = "block";
+    input.disabled = true;
+    input.placeholder = "Upgrade to Premium to send more messages";
+    sendButton.disabled = true;
+}
+
+function hideUpgrade() {
+    upgradePanel.style.display = "none";
+    limitNotice.style.display = "none";
+    freeLimitReached = false;
+    input.disabled = false;
+    input.placeholder = "Write your message...";
+    sendButton.disabled = false;
+}
+
+async function checkMembershipAndMessageCount() {
+    // The entitlement table is the source used by the database message trigger.
+    const { data: entitlement, error: entitlementError } = await db
+        .from("member_entitlements")
+        .select("is_premium,expires_at")
+        .eq("user_id", currentUser.id)
+        .maybeSingle();
+
+    if (entitlementError) throw entitlementError;
+
+    isPremium = Boolean(
+        entitlement?.is_premium &&
+        (!entitlement.expires_at || new Date(entitlement.expires_at) > new Date())
+    );
+
+    if (isPremium) {
+        sentMessageCount = 0;
+        hideUpgrade();
+        return;
+    }
+
+    const { count, error: countError } = await db
+        .from("messages")
+        .select("id", { count: "exact", head: true })
+        .eq("sender_id", currentUser.id);
+
+    if (countError) throw countError;
+
+    sentMessageCount = count || 0;
+
+    if (sentMessageCount >= 2) showUpgrade();
+    else hideUpgrade();
 }
 
 async function loadConversation() {
@@ -131,9 +191,7 @@ async function loadConversation() {
         const { data: messages, error } = await db
             .from("messages")
             .select("id,sender_id,recipient_id,content,created_at")
-            .or(
-                `and(sender_id.eq.${currentUser.id},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${currentUser.id})`
-            )
+            .or(`and(sender_id.eq.${currentUser.id},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${currentUser.id})`)
             .order("created_at", { ascending: true });
 
         if (error) throw error;
@@ -142,64 +200,88 @@ async function loadConversation() {
 
         if (!messages || messages.length === 0) {
             showStatus("No messages yet. Say hello! ❤️");
-            return;
+        } else {
+            statusBox.style.display = "none";
+            messages.forEach(message => {
+                const isMine = message.sender_id === currentUser.id;
+                const bubble = document.createElement("div");
+                bubble.className = "bubble " + (isMine ? "sent" : "received");
+                bubble.innerHTML = `${escapeHTML(message.content)}<span class="time">${escapeHTML(formatTime(message.created_at))}</span>`;
+                chatBox.appendChild(bubble);
+            });
         }
 
-        statusBox.style.display = "none";
-
-        messages.forEach(message => {
-            const isMine = message.sender_id === currentUser.id;
-            const bubble = document.createElement("div");
-            bubble.className = "bubble " + (isMine ? "sent" : "received");
-
-            bubble.innerHTML = `
-                ${escapeHTML(message.content)}
-                <span class="time">${escapeHTML(formatTime(message.created_at))}</span>
-            `;
-
-            chatBox.appendChild(bubble);
-        });
-
         chatBox.scrollTop = chatBox.scrollHeight;
+        await checkMembershipAndMessageCount();
 
     } catch (error) {
         console.error("Message loading error:", error);
-        showStatus(
-            "We couldn't load this conversation. Check that the messages table and its permissions are configured.",
-            true
-        );
+        showStatus("We couldn't load this conversation or your membership status. Check the messages and member_entitlements table permissions.", true);
     }
 }
 
 document.getElementById("messageForm").addEventListener("submit", async event => {
     event.preventDefault();
-
     const content = input.value.trim();
 
-    if (!content || !currentUser || !otherUserId) return;
+    if (!content || !currentUser || !otherUserId || freeLimitReached) return;
+
+    // Client-side early warning; the Supabase trigger remains the final enforcement.
+    if (!isPremium && sentMessageCount >= 2) {
+        showUpgrade();
+        return;
+    }
+
+    if (!isPremium && /[0-9]/.test(content)) {
+        showStatus("Free members cannot send messages containing numbers. Upgrade to Premium to send numeric messages.", true);
+        return;
+    }
 
     sendButton.disabled = true;
 
     try {
-        const { error } = await db
-            .from("messages")
-            .insert({
-                sender_id: currentUser.id,
-                recipient_id: otherUserId,
-                content: content
-            });
+        const { error } = await db.from("messages").insert({
+            sender_id: currentUser.id,
+            recipient_id: otherUserId,
+            content: content
+        });
 
-        if (error) throw error;
+        if (error) {
+            const message = String(error.message || error.details || "");
+            const code = String(error.code || "");
+
+            if (message.includes("FREE_MESSAGE_LIMIT_REACHED")) {
+                showUpgrade();
+                showStatus("You have used your two free messages. Upgrade to Premium to continue chatting.");
+                return;
+            }
+            if (message.includes("NUMBERS_NOT_ALLOWED")) {
+                showStatus("Free members cannot send messages containing numbers. Upgrade to Premium to send numeric messages.", true);
+                return;
+            }
+            if (message.includes("USER_BLOCKED")) {
+                showStatus("This member has blocked you or you have blocked this member. You can still read your past messages, but cannot send new ones.", true);
+                input.disabled = true;
+                sendButton.disabled = true;
+                return;
+            }
+            throw error;
+        }
 
         input.value = "";
         await loadConversation();
 
     } catch (error) {
         console.error("Message sending error:", error);
-        showStatus("Your message could not be sent. Please check your message permissions.", true);
+        showStatus("Your message could not be sent: " + (error.message || "Please check your message permissions."), true);
     } finally {
-        sendButton.disabled = false;
+        if (!freeLimitReached) sendButton.disabled = false;
     }
+});
+
+// Focusing the text box on a touch device opens its normal on-screen keyboard.
+input.addEventListener("click", () => {
+    if (!input.disabled) input.focus();
 });
 
 async function start() {
@@ -208,7 +290,6 @@ async function start() {
         if (error) throw error;
 
         currentUser = data.session?.user;
-
         if (!currentUser) {
             location.href = "login.html";
             return;
@@ -222,7 +303,6 @@ async function start() {
         }
 
         await loadConversation();
-
         refreshTimer = setInterval(loadConversation, 10000);
 
     } catch (error) {
@@ -237,6 +317,5 @@ window.addEventListener("beforeunload", () => {
 
 start();
 </script>
-
 </body>
 </html>

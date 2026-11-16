@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,187 +5,192 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Notifications | Mubeezi Dating</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial,sans-serif;background:#fff5f7;color:#333}
 header{background:#e91e63;color:white;padding:20px;text-align:center}
-header h1{margin:0}
-header p{margin:6px 0 0}
+header h1{margin:0} header p{margin:6px 0 0}
 nav{background:white;padding:12px;text-align:center;box-shadow:0 2px 6px #ddd}
 nav a{display:inline-block;margin:5px 9px;color:#d81b60;text-decoration:none;font-weight:bold;font-size:14px}
 .container{max-width:850px;margin:25px auto;padding:15px}
-.heading{text-align:center;margin-bottom:22px}
-.heading h2{color:#d81b60}
-.notification{background:white;padding:17px;margin-bottom:12px;border-radius:12px;box-shadow:0 2px 8px #0000000d;border-left:5px solid #e91e63}
+.heading{text-align:center;margin-bottom:22px}.heading h2{color:#d81b60}
+.notification{background:white;padding:17px;margin-bottom:12px;border-radius:12px;box-shadow:0 2px 8px #0000000d;border-left:5px solid #e91e63;cursor:pointer}
 .notification.unread{background:#fff0f5}
 .notification h3{margin:0 0 7px;color:#c2185b;font-size:17px}
-.notification p{margin:0;color:#555;line-height:1.5}
+.notification p{margin:0;color:#555;line-height:1.5;overflow-wrap:anywhere}
 .notification small{display:block;margin-top:10px;color:#999}
-.actions{text-align:right;margin-bottom:15px}
+.actions{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:15px}
 button{background:#e91e63;color:white;border:0;border-radius:20px;padding:10px 17px;cursor:pointer;font-weight:bold}
+button:disabled{opacity:.5;cursor:not-allowed}
+.secondary{background:white;color:#d81b60;border:1px solid #e91e63}
 .status{text-align:center;background:white;padding:22px;border-radius:12px;color:#777}
-.error{color:#c62828}
+.error{color:#c62828}.notice{font-size:13px;color:#777;text-align:center;margin:0 auto 14px;line-height:1.5}
+.connection{font-size:12px;text-align:center;color:#777;margin:0 0 12px}
+.connection.online{color:#2e7d32}.connection.offline{color:#c62828}
+@media(max-width:520px){nav{padding:8px 5px}nav a{font-size:12px;margin:5px 6px}.container{margin:15px auto;padding:12px}.notification{padding:14px}}
 </style>
 </head>
-
 <body>
-
-<header>
-<h1>❤️ Mubeezi Dating</h1>
-<p>Connecting Hearts Worldwide</p>
-</header>
-
+<header><h1>❤️ Mubeezi Dating</h1><p>Connecting Hearts Worldwide</p></header>
 <nav>
-<a href="home.html">Home</a>
-<a href="discover.html">Discover</a>
-<a href="likes.html">Likes</a>
-<a href="matches.html">Matches</a>
-<a href="messages.html">Messages</a>
-<a href="my-profile.html">My Profile</a>
+<a href="home.html">Home</a><a href="discover.html">Discover</a><a href="likes.html">Likes</a>
+<a href="matches.html">Matches</a><a href="messages.html">Messages</a><a href="my-profile.html">My Profile</a>
 </nav>
-
 <div class="container">
-
-<div class="heading">
-<h2>🔔 Notifications</h2>
-<p>Stay updated on what's happening with your account.</p>
+  <div class="heading"><h2>🔔 Notifications</h2><p>Stay updated on what's happening with your account.</p></div>
+  <p class="notice">Enable alerts while this page is open to hear a sound and, where supported, see desktop notifications when a new notification arrives.</p>
+  <div class="actions">
+    <button id="enableAlertsButton" type="button">Enable sound &amp; desktop alerts</button>
+    <button id="markAllButton" class="secondary" type="button">Mark all as read</button>
+  </div>
+  <div id="connectionStatus" class="connection">Connecting to live notifications…</div>
+  <div id="status" class="status">Loading notifications...</div>
+  <div id="notificationList"></div>
 </div>
-
-<div class="actions">
-<button id="markAllButton" type="button">Mark all as read</button>
-</div>
-
-<div id="status" class="status">Loading notifications...</div>
-<div id="notificationList"></div>
-
-</div>
-
 <script>
-const SUPABASE_URL = "https://xxtlcdvuiyrdufzvzeob.supabase.co";
-const SUPABASE_KEY = "sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU";
+const SUPABASE_URL="https://xxtlcdvuiyrdufzvzeob.supabase.co";
+const SUPABASE_KEY="sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU";
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const statusBox=document.getElementById("status");
+const list=document.getElementById("notificationList");
+const markAllButton=document.getElementById("markAllButton");
+const enableAlertsButton=document.getElementById("enableAlertsButton");
+const connectionStatus=document.getElementById("connectionStatus");
+let currentUser=null, notificationChannel=null, alertsEnabled=false, audioContext=null;
+const knownNotificationIds=new Set();
 
-const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-const statusBox = document.getElementById("status");
-const list = document.getElementById("notificationList");
-const markAllButton = document.getElementById("markAllButton");
-
-let currentUser = null;
-
-function escapeHTML(value) {
-    return String(value ?? "").replace(/[&<>"']/g, char => ({
-        "&":"&amp;",
-        "<":"&lt;",
-        ">":"&gt;",
-        '"':"&quot;",
-        "'":"&#039;"
-    })[char]);
+function escapeHTML(value){
+ return String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[char]));
 }
-
-function showStatus(message, error = false) {
-    statusBox.textContent = message;
-    statusBox.className = error ? "status error" : "status";
-    statusBox.style.display = "block";
+function showStatus(message,error=false){
+ statusBox.textContent=message;statusBox.className=error?"status error":"status";statusBox.style.display="block";
 }
-
-function formatDate(value) {
-    if (!value) return "";
-    return new Date(value).toLocaleString();
+function formatDate(value){
+ if(!value)return "";const date=new Date(value);return Number.isNaN(date.getTime())?"":date.toLocaleString();
 }
-
-async function loadNotifications() {
-    try {
-        const { data, error } = await db
-            .from("notifications")
-            .select("id,user_id,title,body,type,is_read,created_at")
-            .eq("user_id", currentUser.id)
-            .order("created_at", { ascending: false });
-
-        if (error) throw error;
-
-        list.innerHTML = "";
-
-        if (!data || data.length === 0) {
-            showStatus("You don't have any notifications yet.");
-            markAllButton.disabled = true;
-            return;
-        }
-
-        statusBox.style.display = "none";
-        markAllButton.disabled = false;
-
-        data.forEach(notification => {
-            const item = document.createElement("div");
-            item.className = "notification " +
-                (notification.is_read ? "" : "unread");
-
-            item.innerHTML = `
-                <h3>${escapeHTML(notification.title || "Mubeezi Dating")}</h3>
-                <p>${escapeHTML(notification.body || "")}</p>
-                <small>
-                    ${escapeHTML(notification.type || "Update")}
-                    · ${escapeHTML(formatDate(notification.created_at))}
-                    ${notification.is_read ? " · Read" : " · Unread"}
-                </small>
-            `;
-
-            list.appendChild(item);
-        });
-
-    } catch (error) {
-        console.error("Notifications error:", error);
-        showStatus(
-            "We couldn't load your notifications. Check that the notifications table and permissions are configured.",
-            true
-        );
-    }
+function setConnection(message,state){
+ connectionStatus.textContent=message;connectionStatus.className="connection "+(state||"");
 }
-
-markAllButton.addEventListener("click", async () => {
-    markAllButton.disabled = true;
-
-    try {
-        const { error } = await db
-            .from("notifications")
-            .update({ is_read: true })
-            .eq("user_id", currentUser.id)
-            .eq("is_read", false);
-
-        if (error) throw error;
-
-        await loadNotifications();
-
-    } catch (error) {
-        console.error("Mark notifications read error:", error);
-        showStatus("We couldn't update your notifications. Please try again.", true);
-    } finally {
-        markAllButton.disabled = false;
-    }
+function playNotificationSound(){
+ if(!alertsEnabled||!audioContext)return;
+ try{
+  if(audioContext.state==="suspended")audioContext.resume();
+  const oscillator=audioContext.createOscillator(),gain=audioContext.createGain();
+  oscillator.type="sine";oscillator.frequency.setValueAtTime(880,audioContext.currentTime);
+  gain.gain.setValueAtTime(0.0001,audioContext.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.12,audioContext.currentTime+0.03);
+  gain.gain.exponentialRampToValueAtTime(0.0001,audioContext.currentTime+0.35);
+  oscillator.connect(gain);gain.connect(audioContext.destination);
+  oscillator.start();oscillator.stop(audioContext.currentTime+0.36);
+ }catch(error){console.warn("Notification sound could not play:",error);}
+}
+function showDesktopNotification(notification){
+ if(!alertsEnabled||!("Notification"in window)||Notification.permission!=="granted")return;
+ try{
+  const popup=new Notification(notification.title||"Mubeezi Dating",{
+   body:notification.body||"You have a new notification.",tag:String(notification.id||"mubeezi-notification")
+  });
+  popup.onclick=()=>{window.focus();const url=notification.data&&notification.data.chat_url;if(url)window.location.href=url;popup.close();};
+ }catch(error){console.warn("Desktop notification could not be displayed:",error);}
+}
+async function enableAlerts(){
+ try{
+  const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+  if(AudioContextClass){
+   audioContext=audioContext||new AudioContextClass();
+   if(audioContext.state==="suspended")await audioContext.resume();
+   alertsEnabled=true;playNotificationSound();
+  }
+  let message="";
+  if("Notification"in window){
+   if(Notification.permission==="default"){
+    const permission=await Notification.requestPermission();
+    message=permission==="granted"?" Desktop alerts enabled.":" Desktop alerts were not allowed.";
+   }else if(Notification.permission==="granted")message=" Desktop alerts enabled.";
+   else message=" Desktop alerts are blocked in browser settings.";
+  }else message=" Desktop alerts are not supported by this browser.";
+  enableAlertsButton.textContent=alertsEnabled?"Alerts enabled":"Try enabling alerts again";
+  setConnection("Live notifications are active. Sound is "+(alertsEnabled?"enabled.":"not enabled."),"online");
+  alert("Notification settings updated."+message+(alertsEnabled?" Sound is enabled while this page is open.":""));
+ }catch(error){console.error(error);alert("Your browser did not enable alerts. Check this site's sound and notification permissions.");}
+}
+function destination(notification){return notification.data&&notification.data.chat_url?notification.data.chat_url:"";}
+async function markOneAsRead(id){
+ const {error}=await db.from("notifications").update({is_read:true}).eq("id",id).eq("user_id",currentUser.id);
+ if(error)console.warn("Could not mark notification as read:",error);
+}
+function renderNotification(notification){
+ if(!notification||!notification.id)return;
+ knownNotificationIds.add(notification.id);
+ const old=document.getElementById("notification-"+notification.id);if(old)old.remove();
+ const item=document.createElement("div");
+ item.id="notification-"+notification.id;
+ item.className="notification "+(notification.is_read?"":"unread");
+ item.setAttribute("role","button");item.setAttribute("tabindex","0");
+ item.innerHTML=`<h3>${escapeHTML(notification.title||"Mubeezi Dating")}</h3>
+ <p>${escapeHTML(notification.body||"")}</p>
+ <small>${escapeHTML(notification.type||"Update")} · ${escapeHTML(formatDate(notification.created_at))}
+ ${notification.is_read?" · Read":" · Unread"}${destination(notification)?" · Open conversation":""}</small>`;
+ const openItem=async()=>{
+  if(!notification.is_read)await markOneAsRead(notification.id);
+  const url=destination(notification);
+  if(url){window.location.href=url;return;}
+  notification.is_read=true;item.classList.remove("unread");
+  const small=item.querySelector("small");
+  if(small)small.textContent=(notification.type||"Update")+" · "+formatDate(notification.created_at)+" · Read";
+ };
+ item.addEventListener("click",openItem);
+ item.addEventListener("keydown",event=>{if(event.key==="Enter"||event.key===" "){event.preventDefault();openItem();}});
+ list.prepend(item);
+}
+async function loadNotifications(){
+ try{
+  const {data,error}=await db.from("notifications")
+   .select("id,user_id,title,body,type,is_read,created_at,data")
+   .eq("user_id",currentUser.id).order("created_at",{ascending:false});
+  if(error)throw error;
+  list.innerHTML="";knownNotificationIds.clear();
+  if(!data||data.length===0){showStatus("You don't have any notifications yet.");markAllButton.disabled=true;return;}
+  statusBox.style.display="none";markAllButton.disabled=false;data.forEach(renderNotification);
+ }catch(error){
+  console.error("Notifications error:",error);
+  showStatus("We couldn't load notifications. Check that the notifications table, data column and permissions are configured.",true);
+ }
+}
+function subscribeToNotifications(){
+ if(notificationChannel){db.removeChannel(notificationChannel);notificationChannel=null;}
+ notificationChannel=db.channel("member-notifications-"+currentUser.id)
+  .on("postgres_changes",{event:"INSERT",schema:"public",table:"notifications",filter:"user_id=eq."+currentUser.id},payload=>{
+   const notification=payload.new;
+   if(!notification||knownNotificationIds.has(notification.id))return;
+   renderNotification(notification);statusBox.style.display="none";markAllButton.disabled=false;
+   playNotificationSound();showDesktopNotification(notification);
+  })
+  .subscribe(state=>{
+   if(state==="SUBSCRIBED")setConnection("Live notifications connected.","online");
+   else if(state==="CHANNEL_ERROR"||state==="TIMED_OUT")setConnection("Live connection interrupted. Trying to reconnect…","offline");
+   else if(state==="CLOSED")setConnection("Live notifications disconnected.","offline");
+  });
+}
+markAllButton.addEventListener("click",async()=>{
+ if(!currentUser)return;markAllButton.disabled=true;
+ try{
+  const {error}=await db.from("notifications").update({is_read:true}).eq("user_id",currentUser.id).eq("is_read",false);
+  if(error)throw error;await loadNotifications();
+ }catch(error){console.error(error);showStatus("We couldn't update your notifications. Please try again.",true);}
+ finally{markAllButton.disabled=false;}
 });
-
-async function start() {
-    try {
-        const { data, error } = await db.auth.getSession();
-        if (error) throw error;
-
-        currentUser = data.session?.user;
-
-        if (!currentUser) {
-            location.href = "login.html";
-            return;
-        }
-
-        await loadNotifications();
-
-    } catch (error) {
-        console.error(error);
-        showStatus("Please sign in to view your notifications.", true);
-    }
+enableAlertsButton.addEventListener("click",enableAlerts);
+async function start(){
+ try{
+  const {data,error}=await db.auth.getSession();if(error)throw error;
+  currentUser=data.session&&data.session.user;
+  if(!currentUser){window.location.href="login.html";return;}
+  await loadNotifications();subscribeToNotifications();
+ }catch(error){console.error(error);showStatus("Please sign in to view your notifications.",true);}
 }
-
+window.addEventListener("beforeunload",()=>{if(notificationChannel)db.removeChannel(notificationChannel);});
 start();
 </script>
-
 </body>
 </html>

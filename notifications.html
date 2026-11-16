@@ -56,7 +56,7 @@ const list=document.getElementById("notificationList");
 const markAllButton=document.getElementById("markAllButton");
 const enableAlertsButton=document.getElementById("enableAlertsButton");
 const connectionStatus=document.getElementById("connectionStatus");
-let currentUser=null, notificationChannel=null, alertsEnabled=false, audioContext=null;
+let currentUser=null, notificationChannel=null, alertsEnabled=false, audioContext=null, refreshTimer=null;
 const knownNotificationIds=new Set();
 
 function escapeHTML(value){
@@ -146,7 +146,7 @@ function renderNotification(notification){
 async function loadNotifications(){
  try{
   const {data,error}=await db.from("notifications")
-   .select("id,user_id,title,body,type,is_read,created_at,data")
+   .select("*")
    .eq("user_id",currentUser.id).order("created_at",{ascending:false});
   if(error)throw error;
   list.innerHTML="";knownNotificationIds.clear();
@@ -154,7 +154,7 @@ async function loadNotifications(){
   statusBox.style.display="none";markAllButton.disabled=false;data.forEach(renderNotification);
  }catch(error){
   console.error("Notifications error:",error);
-  showStatus("We couldn't load notifications. Check that the notifications table, data column and permissions are configured.",true);
+  showStatus("Notifications could not be loaded: "+(error.message||error.details||String(error)),true);
  }
 }
 function subscribeToNotifications(){
@@ -185,11 +185,18 @@ async function start(){
  try{
   const {data,error}=await db.auth.getSession();if(error)throw error;
   currentUser=data.session&&data.session.user;
-  if(!currentUser){window.location.href="login.html";return;}
-  await loadNotifications();subscribeToNotifications();
+  if(!currentUser){window.location.href="login.html?next=notifications.html";return;}
+  await loadNotifications();
+  subscribeToNotifications();
+  // Refresh periodically even when Supabase Realtime is not enabled.
+  if(refreshTimer)clearInterval(refreshTimer);
+  refreshTimer=setInterval(()=>loadNotifications(),10000);
  }catch(error){console.error(error);showStatus("Please sign in to view your notifications.",true);}
 }
-window.addEventListener("beforeunload",()=>{if(notificationChannel)db.removeChannel(notificationChannel);});
+window.addEventListener("beforeunload",()=>{
+ if(notificationChannel)db.removeChannel(notificationChannel);
+ if(refreshTimer)clearInterval(refreshTimer);
+});
 start();
 </script>
 </body>

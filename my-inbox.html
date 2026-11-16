@@ -1,50 +1,156 @@
-<!doctype html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>My Inbox | Mubeezi Dating</title>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#d71945">
+<title>My Inbox | Mubeezi Dating</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#fff5f7;color:#333}header{background:#e91e63;color:#fff;text-align:center;padding:20px}header h1{margin:0}header p{margin:6px 0 0}nav{background:#fff;padding:12px;text-align:center;box-shadow:0 2px 6px #ddd}nav a{display:inline-block;margin:5px 9px;color:#d81b60;text-decoration:none;font-weight:bold;font-size:14px}.container{max-width:850px;margin:25px auto;padding:15px}.heading{text-align:center;margin-bottom:20px}.heading h2{color:#d81b60}#search{width:100%;padding:13px 15px;border:1px solid #f2b5ca;border-radius:24px;font-size:15px;margin-bottom:15px}.chat{display:flex;align-items:center;gap:13px;background:white;border-radius:13px;padding:13px 15px;margin-bottom:10px;text-decoration:none;color:#333;box-shadow:0 2px 8px #0000000d;border-left:4px solid transparent}.chat.unread{background:#fff0f5;border-left-color:#e91e63}.avatar{width:52px;height:52px;flex:0 0 52px;border-radius:50%;object-fit:cover;background:#ffe0eb}.details{min-width:0;flex:1}.top{display:flex;justify-content:space-between;gap:8px}.name{font-weight:bold;color:#c2185b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.time{font-size:11px;color:#999;white-space:nowrap}.preview{font-size:13px;color:#666;margin-top:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.unread .preview{font-weight:bold;color:#333}.badge{background:#e91e63;color:#fff;border-radius:20px;min-width:22px;height:22px;padding:3px 6px;text-align:center;font-size:11px;font-weight:bold}.status{background:white;padding:22px;border-radius:12px;text-align:center;color:#777}.error{color:#c62828}@media(max-width:520px){nav a{font-size:12px;margin:5px 6px}.container{padding:12px;margin:15px auto}}
-</style></head><body>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#fff5f7;color:#29242a}
+header{background:#d71945;color:#fff;padding:20px 14px;text-align:center}
+header h1{margin:0;font-size:25px}
+header p{margin:5px 0 0;font-size:13px}
+nav{display:flex;justify-content:center;gap:9px;flex-wrap:wrap;padding:12px;background:#fff;box-shadow:0 2px 8px #0000000d}
+nav a{color:#d71945;text-decoration:none;font-weight:bold;font-size:13px;padding:7px 10px}
+.container{width:min(760px,94%);margin:25px auto}
+.heading{text-align:center;margin-bottom:20px}
+.heading h2{color:#d71945;margin:0 0 5px}
+.heading p{color:#777;font-size:14px}
+.search{width:100%;padding:13px 15px;border:1px solid #f0dce3;border-radius:25px;font-size:15px;outline:none;margin-bottom:15px}
+.search:focus{border-color:#d71945}
+.status{background:#fff;padding:22px;border-radius:13px;text-align:center;color:#777;margin:12px 0}
+.status.error{color:#b42318}
+.chat-list{display:grid;gap:10px}
+.chat{display:flex;align-items:center;gap:13px;background:#fff;border:1px solid #f0e2e6;border-radius:15px;padding:13px;text-decoration:none;color:inherit;box-shadow:0 3px 12px #54152a09;transition:.15s}
+.chat:hover{border-color:#f1a9c0;transform:translateY(-1px)}
+.avatar{width:58px;height:58px;flex:0 0 58px;border-radius:50%;overflow:hidden;background:#ffe1eb;display:grid;place-items:center;color:#d71945;font-size:23px;font-weight:bold}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.chat-main{min-width:0;flex:1}
+.chat-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.chat-name{font-size:16px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-date{font-size:11px;color:#999;white-space:nowrap}
+.chat-preview{font-size:13px;color:#777;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-preview.unread{font-weight:700;color:#393039}
+.unread-badge{min-width:21px;height:21px;padding:0 6px;border-radius:20px;background:#e91e63;color:#fff;font-size:11px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;margin-left:8px}
+footer{text-align:center;color:#888;font-size:12px;padding:25px 10px}
+@media(max-width:420px){.container{margin:18px auto}.chat{padding:11px;gap:10px}.avatar{width:50px;height:50px;flex-basis:50px}.chat-name{font-size:14px}.chat-date{font-size:10px}}
+</style>
+</head>
+<body>
 <header><h1>❤️ Mubeezi Dating</h1><p>Connecting Hearts Worldwide</p></header>
-<nav><a href="index.html">Home</a><a href="discover.html">Discover</a><a href="notifications.html">Notifications</a><a href="my-profile.html">My Profile</a></nav>
-<main class="container"><div class="heading"><h2>📥 My Inbox</h2><p>Select a member to open your private chat.</p></div><input id="search" type="search" placeholder="Search conversations..."><div id="status" class="status">Loading your conversations...</div><div id="list"></div></main>
+<nav aria-label="Main navigation">
+<a href="home.html">Home</a><a href="discover.html">Discover</a><a href="likes.html">Likes</a><a href="matches.html">Matches</a><a href="notifications.html">Notifications</a><a href="my-profile.html">My Profile</a>
+</nav>
+<main class="container">
+  <div class="heading"><h2>💌 My Inbox</h2><p>Select a conversation to continue chatting.</p></div>
+  <input id="searchChats" class="search" type="search" placeholder="Search your conversations..." aria-label="Search conversations">
+  <div id="status" class="status">Loading your conversations...</div>
+  <div id="chatList" class="chat-list"></div>
+</main>
+<footer>© <span id="year"></span> Mubeezi Dating</footer>
 <script>
-const URL="https://xxtlcdvuiyrdufzvzeob.supabase.co",KEY="sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU",db=supabase.createClient(URL,KEY);
-const statusBox=document.getElementById("status"),list=document.getElementById("list"),search=document.getElementById("search");
-let me=null,conversations=[];
-const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
-function dateLabel(v){if(!v)return "";let d=new Date(v);return d.toDateString()===new Date().toDateString()?d.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}):d.toLocaleDateString([],{month:"short",day:"numeric"});}
-function render(){
- let term=search.value.trim().toLowerCase(),rows=conversations.filter(c=>(c.name+" "+c.preview).toLowerCase().includes(term));
- list.innerHTML="";
- if(!rows.length){statusBox.style.display="block";statusBox.textContent=term?"No conversations match your search.":"No conversations yet. Visit Discover and message a member.";return;}
- statusBox.style.display="none";
- rows.forEach(c=>{
-  let a=document.createElement("a");a.className="chat"+(c.unread?" unread":"");a.href="messages.html?user="+encodeURIComponent(c.id);
-  a.innerHTML=(c.photo?`<img class="avatar" src="${esc(c.photo)}" alt="">`:'<div class="avatar"></div>')+
-  `<div class="details"><div class="top"><span class="name">${esc(c.name)}</span><span class="time">${esc(dateLabel(c.time))}</span></div><div class="preview">${esc(c.preview)}</div></div>`+
-  (c.unread?`<span class="badge">${c.unread>99?"99+":c.unread}</span>`:"");
-  a.addEventListener("click",async e=>{if(c.unread){e.preventDefault();const {error}=await db.from("messages").update({is_read:true}).eq("sender_id",c.id).eq("recipient_id",me.id).eq("is_read",false);if(error)console.warn(error);location.href=a.href;}});
-  list.appendChild(a);
- });
-}
-async function load(){
- try{
-  statusBox.style.display="block";statusBox.textContent="Loading your conversations...";
-  const {data:msgs,error}=await db.from("messages").select("id,sender_id,recipient_id,content,created_at,is_read").or("sender_id.eq."+me.id+",recipient_id.eq."+me.id).order("created_at",{ascending:false});
-  if(error)throw error;
-  if(!msgs?.length){conversations=[];render();return;}
-  const ids=[...new Set(msgs.map(m=>m.sender_id===me.id?m.recipient_id:m.sender_id).filter(Boolean))];
-  const {data:profiles,error:pe}=await db.from("profiles").select("id,display_name,full_name,username,profile_photo").in("id",ids);
-  if(pe)console.warn("Profile lookup:",pe);
-  const pm=new Map((profiles||[]).map(p=>[p.id,p])),groups=new Map();
-  msgs.forEach(m=>{
-   const id=m.sender_id===me.id?m.recipient_id:m.sender_id;if(!id)return;
-   if(!groups.has(id)){let p=pm.get(id);groups.set(id,{id,name:p?.display_name||p?.full_name||p?.username||"Mubeezi Member",photo:p?.profile_photo||"",preview:m.content||"Message",time:m.created_at,unread:0});}
-   if(m.sender_id===id&&m.recipient_id===me.id&&!m.is_read)groups.get(id).unread++;
+const SUPABASE_URL="https://xxtlcdvuiyrdufzvzeob.supabase.co";
+const SUPABASE_KEY="sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU";
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const statusBox=document.getElementById("status");
+const chatList=document.getElementById("chatList");
+let currentUser=null, allChats=[], realtimeChannel=null, refreshTimer=null;
+
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
+function showStatus(msg,error=false){statusBox.textContent=msg;statusBox.className=error?"status error":"status";statusBox.hidden=false;}
+function dateLabel(v){if(!v)return "";const d=new Date(v);if(Number.isNaN(d.getTime()))return "";return d.toLocaleString([], {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});}
+function otherMemberId(m){return m.sender_id===currentUser.id?m.recipient_id:m.sender_id;}
+
+async function loadChats(){
+  const {data:messages,error}=await db.from("messages")
+    .select("id,sender_id,recipient_id,content,created_at,is_read")
+    .or(`sender_id.eq.${currentUser.id},recipient_id.eq.${currentUser.id}`)
+    .order("created_at",{ascending:false})
+    .limit(1000);
+  if(error) throw error;
+  const latestByMember=new Map();
+  for(const message of (messages||[])){
+    const otherId=otherMemberId(message);
+    if(!otherId || otherId===currentUser.id) continue;
+    if(!latestByMember.has(otherId)){
+      latestByMember.set(otherId,{otherId,last:message,unread:0});
+    }
+    if(message.recipient_id===currentUser.id && message.is_read===false){
+      latestByMember.get(otherId).unread++;
+    }
+  }
+  const ids=[...latestByMember.keys()];
+  let profiles=[];
+  if(ids.length){
+    const {data,error:profileError}=await db.from("profiles")
+      .select("id,display_name,full_name,username,country,profile_photo")
+      .in("id",ids);
+    if(profileError) console.warn("Could not load inbox profile details:",profileError);
+    profiles=data||[];
+  }
+  const profileMap=new Map(profiles.map(p=>[p.id,p]));
+  allChats=[...latestByMember.values()].map(item=>{
+    const p=profileMap.get(item.otherId)||{};
+    return {...item,profile:p,name:p.display_name||p.full_name||p.username||"Mubeezi Member"};
   });
-  conversations=[...groups.values()].sort((a,b)=>new Date(b.time)-new Date(a.time));render();
- }catch(e){console.error(e);statusBox.style.display="block";statusBox.className="status error";statusBox.textContent="Could not load inbox. Check the messages table, is_read column and permissions.";}
+  allChats.sort((a,b)=>new Date(b.last.created_at||0)-new Date(a.last.created_at||0));
+  renderChats();
 }
-async function start(){const {data,error}=await db.auth.getSession();if(error)throw error;me=data.session?.user;if(!me){location.href="login.html?next="+encodeURIComponent("inbox.html");return;}await load();db.channel("inbox-"+me.id).on("postgres_changes",{event:"INSERT",schema:"public",table:"messages"},p=>{if(p.new.sender_id===me.id||p.new.recipient_id===me.id)load();}).subscribe();}
-search.addEventListener("input",render);start().catch(e=>{console.error(e);statusBox.textContent="Please sign in to view your inbox.";});
-</script></body></html>
+
+function renderChats(){
+  const term=document.getElementById("searchChats").value.trim().toLowerCase();
+  const filtered=allChats.filter(c=>(c.name+" "+(c.profile.country||"")).toLowerCase().includes(term));
+  chatList.innerHTML="";
+  if(!filtered.length){
+    showStatus(allChats.length?"No conversations match your search.":"You don't have any conversations yet.");
+    return;
+  }
+  statusBox.hidden=true;
+  filtered.forEach(c=>{
+    const a=document.createElement("a");
+    a.className="chat";
+    a.href="messages.html?user="+encodeURIComponent(c.otherId);
+    const photo=c.profile.profile_photo;
+    const initial=esc(c.name.trim().charAt(0).toUpperCase()||"M");
+    const avatar=photo?`<img src="${esc(photo)}" alt="${esc(c.name)}" onerror="this.style.display='none';this.parentElement.textContent='${initial}'">`:initial;
+    const preview=c.last.content||"Sent an attachment";
+    a.innerHTML=`<div class="avatar">${avatar}</div>
+      <div class="chat-main">
+        <div class="chat-top"><span class="chat-name">${esc(c.name)}</span><span class="chat-date">${esc(dateLabel(c.last.created_at))}</span></div>
+        <div class="chat-preview ${c.unread?"unread":""}">${esc(preview)}</div>
+      </div>${c.unread?`<span class="unread-badge">${c.unread>99?"99+":c.unread}</span>`:""}`;
+    a.addEventListener("click",async()=>{
+      if(c.unread){
+        await db.from("messages").update({is_read:true})
+          .eq("sender_id",c.otherId).eq("recipient_id",currentUser.id).eq("is_read",false);
+      }
+    });
+    chatList.appendChild(a);
+  });
+}
+
+async function start(){
+  try{
+    const {data,error}=await db.auth.getSession();
+    if(error) throw error;
+    currentUser=data.session?.user;
+    if(!currentUser){location.href="login.html?next="+encodeURIComponent("inbox.html");return;}
+    await loadChats();
+    realtimeChannel=db.channel("inbox-list-"+currentUser.id)
+      .on("postgres_changes",{event:"*",schema:"public",table:"messages",filter:"recipient_id=eq."+currentUser.id},()=>loadChats().catch(e=>showStatus("Could not refresh conversations: "+e.message,true)))
+      .on("postgres_changes",{event:"*",schema:"public",table:"messages",filter:"sender_id=eq."+currentUser.id},()=>loadChats().catch(e=>showStatus("Could not refresh conversations: "+e.message,true)))
+      .subscribe();
+    refreshTimer=window.setInterval(()=>loadChats().catch(e=>console.warn("Inbox refresh:",e)),15000);
+  }catch(error){
+    console.error("Inbox error:",error);
+    showStatus("We couldn't load your inbox. Check the messages table, read-status column, and Supabase permissions. "+(error.message||""),true);
+  }
+}
+document.getElementById("searchChats").addEventListener("input",renderChats);
+document.getElementById("year").textContent=new Date().getFullYear();
+start();
+</script>
+</body>
+</html>

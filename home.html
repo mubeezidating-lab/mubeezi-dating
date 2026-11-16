@@ -20,6 +20,7 @@
     .top-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
     .country-filter{min-width:190px;padding:10px 13px;border:1px solid var(--line);border-radius:24px;background:#fff;color:var(--dark);font-size:14px}
     .top-buttons{display:flex;gap:9px;flex-wrap:wrap}.top-buttons[hidden]{display:none}
+    .inbox-link{position:relative}.inbox-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;margin-left:5px;border-radius:20px;background:#fff;color:#d71945;font-size:10px;font-weight:900;line-height:1}.inbox-badge[hidden]{display:none}
     .btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 19px;border-radius:24px;font-size:10px;font-weight:700;border:1px solid var(--red);transition:.2s}
     .btn:hover{transform:translateY(-1px)}
     .btn-outline{color:var(--red);background:#fff;border:1px solid var(--red)}
@@ -270,7 +271,7 @@
         </select>
         <nav class="top-buttons" aria-label="Main navigation">
   <a class="btn btn-primary" href="discover.html">Discover</a>
-  <a class="btn btn-primary" href="messages.html">My Inbox</a>
+  <a class="btn btn-primary inbox-link" href="inbox.html" id="myInboxButton">My Inbox <span class="inbox-badge" id="inboxUnreadBadge" hidden>0</span></a>
   <a class="btn btn-primary" href="premium.html">Premium</a>
   <a class="btn btn-primary" href="register.html" id="myAccountButton">My Account</a>
 </nav>
@@ -381,7 +382,8 @@
         let failed = false;
         while (true) {
           const result = await client.from(table)
-            .select("id,display_name,full_name,username,country,profile_photo")
+            .select("id,display_name,full_name,username,country,profile_photo,created_at")
+            .order("created_at", { ascending: false, nullsFirst: false })
             .range(offset, offset + 499);
           if (result.error) {
             lastError = result.error;
@@ -442,14 +444,79 @@
       window.location.assign(new URL(destination, document.baseURI).href);
     });
 
+    // Live unread-message badge for the signed-in member.
+    let inboxClient = null;
+    let inboxChannel = null;
+    let inboxRefreshTimer = null;
+
+    function showInboxUnread(count) {
+      const badge = document.getElementById("inboxUnreadBadge");
+      if (!badge) return;
+      const total = Number(count || 0);
+      badge.textContent = total > 99 ? "99+" : String(total);
+      badge.hidden = total < 1;
+      document.getElementById("myInboxButton")?.setAttribute(
+        "aria-label", total ? `My Inbox, ${total} unread messages` : "My Inbox"
+      );
+    }
+
+    async function refreshInboxUnread() {
+      if (!inboxClient) return;
+      const { data: sessionData, error: sessionError } = await inboxClient.auth.getSession();
+      if (sessionError) throw sessionError;
+      const member = sessionData.session?.user;
+      if (!member) {
+        showInboxUnread(0);
+        if (inboxChannel) {
+          await inboxClient.removeChannel(inboxChannel);
+          inboxChannel = null;
+        }
+        return;
+      }
+
+      const { count, error } = await inboxClient
+        .from("messages")
+        .select("id", { count: "exact", head: true })
+        .eq("recipient_id", member.id)
+        .eq("is_read", false);
+
+      if (error) {
+        console.warn("Unread inbox count could not be loaded. Check messages.is_read and RLS:", error);
+        return;
+      }
+      showInboxUnread(count || 0);
+
+      if (!inboxChannel) {
+        inboxChannel = inboxClient.channel("home-inbox-" + member.id)
+          .on("postgres_changes", {
+            event: "*", schema: "public", table: "messages",
+            filter: "recipient_id=eq." + member.id
+          }, () => refreshInboxUnread().catch(console.warn))
+          .subscribe();
+      }
+    }
+
+    function startInboxBadge() {
+      inboxClient = window.supabase.createClient(
+        "https://xxtlcdvuiyrdufzvzeob.supabase.co",
+        "sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU"
+      );
+      refreshInboxUnread().catch(error => console.warn("Inbox badge:", error));
+      // Backup refresh also catches read-status changes and missed realtime events.
+      inboxRefreshTimer = window.setInterval(
+        () => refreshInboxUnread().catch(error => console.warn("Inbox badge refresh:", error)),
+        15000
+      );
+    }
+
     // Load the SDK asynchronously; the country list and account fallback work even if it fails.
     const sdk = document.createElement("script");
     sdk.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
-    sdk.onload = () => loadProfiles().catch(error => {
+    sdk.onload = () => { startInboxBadge(); loadProfiles().catch(error => {
       console.error(error);
       grid.innerHTML = "";
       status.textContent = "An unexpected error occurred while loading profiles: " + (error.message || error);
-    });
+    }); };
     sdk.onerror = () => {
       grid.innerHTML = "";
       status.textContent = "Could not load Supabase. The country list is available, but profiles need the database connection.";

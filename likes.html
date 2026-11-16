@@ -131,11 +131,8 @@
       // Only display profiles that are currently discoverable.
       const { data: profiles, error: profilesError } = await db
         .from("profiles")
-        .select("id, display_name, full_name, age, country, profile_photo, profile_visible, is_active, profile_completed")
-        .in("id", uniqueIds)
-        .eq("profile_visible", true)
-        .eq("is_active", true)
-        .eq("profile_completed", true);
+        .select("id, display_name, full_name, username, age, country, profile_photo")
+        .in("id", uniqueIds);
 
       if (profilesError) throw profilesError;
 
@@ -143,9 +140,7 @@
       const visibleIds = new Set(visibleProfiles.map(p => p.id));
 
       // Remove likes whose senders are no longer discoverable.
-      const displayedLikes = (likes || []).filter(
-        like => visibleIds.has(like.liker_id)
-      );
+      const displayedLikes = (likes || []).filter((like, index, all) => visibleIds.has(like.liker_id) && all.findIndex(x => x.liker_id === like.liker_id) === index);
 
       count.textContent =
         `${displayedLikes.length} member${displayedLikes.length === 1 ? "" : "s"} like you`;
@@ -158,19 +153,6 @@
 
       const profileMap = new Map(
         visibleProfiles.map(profile => [profile.id, profile])
-      );
-
-      // Check which of these members you have already liked.
-      const { data: outgoingLikes, error: outgoingError } = await db
-        .from("profile_likes")
-        .select("liked_id")
-        .eq("liker_id", currentUser.id)
-        .in("liked_id", displayedLikes.map(like => like.liker_id));
-
-      if (outgoingError) throw outgoingError;
-
-      const alreadyLiked = new Set(
-        (outgoingLikes || []).map(item => item.liked_id)
       );
 
       displayedLikes.forEach(like => {
@@ -209,34 +191,12 @@
         view.href = "view-profile.html?id=" + encodeURIComponent(profile.id);
         view.textContent = "View Profile";
 
-        const likeBack = document.createElement("button");
-        likeBack.className = "like";
-        likeBack.textContent = alreadyLiked.has(profile.id) ? "Liked ✓" : "Like Back";
-        likeBack.disabled = alreadyLiked.has(profile.id);
+        const reply = document.createElement("a");
+        reply.className = "reply";
+        reply.href = "messages.html?user=" + encodeURIComponent(profile.id);
+        reply.textContent = "Reply";
 
-        likeBack.addEventListener("click", async () => {
-          likeBack.disabled = true;
-          likeBack.textContent = "Sending...";
-
-          const { error } = await db.from("profile_likes").insert({
-            liker_id: currentUser.id,
-            liked_id: profile.id
-          });
-
-          if (error) {
-            console.error(error);
-            likeBack.disabled = false;
-            likeBack.textContent = "Try Again";
-            showMessage("Could not send your like. " + error.message, "error");
-            return;
-          }
-
-          likeBack.textContent = "Liked ✓";
-          alreadyLiked.add(profile.id);
-          showMessage("Your interest has been sent!", "success");
-        });
-
-        actions.append(view, likeBack);
+        actions.append(view, reply);
         info.append(title, locationText, actions);
         card.append(image, info);
         grid.appendChild(card);

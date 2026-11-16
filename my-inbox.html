@@ -1,1 +1,50 @@
-
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>My Inbox | Mubeezi Dating</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#fff5f7;color:#333}header{background:#e91e63;color:#fff;text-align:center;padding:20px}header h1{margin:0}header p{margin:6px 0 0}nav{background:#fff;padding:12px;text-align:center;box-shadow:0 2px 6px #ddd}nav a{display:inline-block;margin:5px 9px;color:#d81b60;text-decoration:none;font-weight:bold;font-size:14px}.container{max-width:850px;margin:25px auto;padding:15px}.heading{text-align:center;margin-bottom:20px}.heading h2{color:#d81b60}#search{width:100%;padding:13px 15px;border:1px solid #f2b5ca;border-radius:24px;font-size:15px;margin-bottom:15px}.chat{display:flex;align-items:center;gap:13px;background:white;border-radius:13px;padding:13px 15px;margin-bottom:10px;text-decoration:none;color:#333;box-shadow:0 2px 8px #0000000d;border-left:4px solid transparent}.chat.unread{background:#fff0f5;border-left-color:#e91e63}.avatar{width:52px;height:52px;flex:0 0 52px;border-radius:50%;object-fit:cover;background:#ffe0eb}.details{min-width:0;flex:1}.top{display:flex;justify-content:space-between;gap:8px}.name{font-weight:bold;color:#c2185b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.time{font-size:11px;color:#999;white-space:nowrap}.preview{font-size:13px;color:#666;margin-top:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.unread .preview{font-weight:bold;color:#333}.badge{background:#e91e63;color:#fff;border-radius:20px;min-width:22px;height:22px;padding:3px 6px;text-align:center;font-size:11px;font-weight:bold}.status{background:white;padding:22px;border-radius:12px;text-align:center;color:#777}.error{color:#c62828}@media(max-width:520px){nav a{font-size:12px;margin:5px 6px}.container{padding:12px;margin:15px auto}}
+</style></head><body>
+<header><h1>❤️ Mubeezi Dating</h1><p>Connecting Hearts Worldwide</p></header>
+<nav><a href="index.html">Home</a><a href="discover.html">Discover</a><a href="notifications.html">Notifications</a><a href="my-profile.html">My Profile</a></nav>
+<main class="container"><div class="heading"><h2>📥 My Inbox</h2><p>Select a member to open your private chat.</p></div><input id="search" type="search" placeholder="Search conversations..."><div id="status" class="status">Loading your conversations...</div><div id="list"></div></main>
+<script>
+const URL="https://xxtlcdvuiyrdufzvzeob.supabase.co",KEY="sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU",db=supabase.createClient(URL,KEY);
+const statusBox=document.getElementById("status"),list=document.getElementById("list"),search=document.getElementById("search");
+let me=null,conversations=[];
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+function dateLabel(v){if(!v)return "";let d=new Date(v);return d.toDateString()===new Date().toDateString()?d.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}):d.toLocaleDateString([],{month:"short",day:"numeric"});}
+function render(){
+ let term=search.value.trim().toLowerCase(),rows=conversations.filter(c=>(c.name+" "+c.preview).toLowerCase().includes(term));
+ list.innerHTML="";
+ if(!rows.length){statusBox.style.display="block";statusBox.textContent=term?"No conversations match your search.":"No conversations yet. Visit Discover and message a member.";return;}
+ statusBox.style.display="none";
+ rows.forEach(c=>{
+  let a=document.createElement("a");a.className="chat"+(c.unread?" unread":"");a.href="messages.html?user="+encodeURIComponent(c.id);
+  a.innerHTML=(c.photo?`<img class="avatar" src="${esc(c.photo)}" alt="">`:'<div class="avatar"></div>')+
+  `<div class="details"><div class="top"><span class="name">${esc(c.name)}</span><span class="time">${esc(dateLabel(c.time))}</span></div><div class="preview">${esc(c.preview)}</div></div>`+
+  (c.unread?`<span class="badge">${c.unread>99?"99+":c.unread}</span>`:"");
+  a.addEventListener("click",async e=>{if(c.unread){e.preventDefault();const {error}=await db.from("messages").update({is_read:true}).eq("sender_id",c.id).eq("recipient_id",me.id).eq("is_read",false);if(error)console.warn(error);location.href=a.href;}});
+  list.appendChild(a);
+ });
+}
+async function load(){
+ try{
+  statusBox.style.display="block";statusBox.textContent="Loading your conversations...";
+  const {data:msgs,error}=await db.from("messages").select("id,sender_id,recipient_id,content,created_at,is_read").or("sender_id.eq."+me.id+",recipient_id.eq."+me.id).order("created_at",{ascending:false});
+  if(error)throw error;
+  if(!msgs?.length){conversations=[];render();return;}
+  const ids=[...new Set(msgs.map(m=>m.sender_id===me.id?m.recipient_id:m.sender_id).filter(Boolean))];
+  const {data:profiles,error:pe}=await db.from("profiles").select("id,display_name,full_name,username,profile_photo").in("id",ids);
+  if(pe)console.warn("Profile lookup:",pe);
+  const pm=new Map((profiles||[]).map(p=>[p.id,p])),groups=new Map();
+  msgs.forEach(m=>{
+   const id=m.sender_id===me.id?m.recipient_id:m.sender_id;if(!id)return;
+   if(!groups.has(id)){let p=pm.get(id);groups.set(id,{id,name:p?.display_name||p?.full_name||p?.username||"Mubeezi Member",photo:p?.profile_photo||"",preview:m.content||"Message",time:m.created_at,unread:0});}
+   if(m.sender_id===id&&m.recipient_id===me.id&&!m.is_read)groups.get(id).unread++;
+  });
+  conversations=[...groups.values()].sort((a,b)=>new Date(b.time)-new Date(a.time));render();
+ }catch(e){console.error(e);statusBox.style.display="block";statusBox.className="status error";statusBox.textContent="Could not load inbox. Check the messages table, is_read column and permissions.";}
+}
+async function start(){const {data,error}=await db.auth.getSession();if(error)throw error;me=data.session?.user;if(!me){location.href="login.html?next="+encodeURIComponent("inbox.html");return;}await load();db.channel("inbox-"+me.id).on("postgres_changes",{event:"INSERT",schema:"public",table:"messages"},p=>{if(p.new.sender_id===me.id||p.new.recipient_id===me.id)load();}).subscribe();}
+search.addEventListener("input",render);start().catch(e=>{console.error(e);statusBox.textContent="Please sign in to view your inbox.";});
+</script></body></html>

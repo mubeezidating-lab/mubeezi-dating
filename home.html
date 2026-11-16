@@ -271,7 +271,7 @@
         </select>
         <nav class="top-buttons" aria-label="Main navigation">
   <a class="btn btn-primary" href="discover.html">Discover</a>
-  <a class="btn btn-primary inbox-link" href="my-inbox.html" id="myInboxButton">My Inbox <span class="inbox-badge" id="inboxUnreadBadge" hidden>0</span></a>
+  <a class="btn btn-primary inbox-link" href="inbox.html" id="myInboxButton">My Inbox <span class="inbox-badge" id="inboxUnreadBadge" hidden>0</span></a>
   <a class="btn btn-primary" href="premium.html">Premium</a>
   <a class="btn btn-primary" href="register.html" id="myAccountButton">My Account</a>
 </nav>
@@ -326,9 +326,8 @@
         card.hidden = !!selected && country !== selected &&
           !(card.dataset.countryCode || "").toLocaleLowerCase().includes(selected);
       });
-      const shown = [...document.querySelectorAll(".profile-card")].filter(card => !card.hidden).length;
-      status.textContent = shown ? `${shown} profile${shown === 1 ? "" : "s"} shown.` :
-        "No profiles from this country are currently available.";
+      const shown = [...document.querySelectorAll(".profile-card")].some(card => !card.hidden);
+      status.textContent = shown ? "" : "No profiles from this country are currently available.";
     });
 
     function escapeHtml(value = "") {
@@ -418,7 +417,7 @@
       grid.innerHTML = rows.map(makeCard).join("");
       const selected = countryFilter.value.trim().toLocaleLowerCase();
       if (selected) countryFilter.dispatchEvent(new Event("change"));
-      else status.textContent = `${rows.length} profile${rows.length === 1 ? "" : "s"} loaded from the database.`;
+      else status.textContent = "";
     }
 
     // My Account: send signed-in members to their profile; others to login.

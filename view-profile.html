@@ -37,6 +37,11 @@
     .name-line{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
     h1{font-size:29px;line-height:1.2}
     .verified{font-size:12px;color:#16834b;background:#e9f8ef;border-radius:20px;padding:4px 9px;font-weight:700}
+    .presence{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--muted);background:#f7f4f6;border:1px solid var(--line);border-radius:20px;padding:4px 9px}
+    .presence-dot{width:9px;height:9px;border-radius:50%;background:#969096;display:inline-block;flex:0 0 9px}
+    .presence.online{color:#16834b;background:#e9f8ef;border-color:#c9ecd5}
+    .presence.online .presence-dot{background:#20ad5b;box-shadow:0 0 0 3px #20ad5b20}
+    .presence.offline .presence-dot{background:#99939a}
     .meta{color:var(--muted);margin:9px 0 18px}
     .bio{font-size:15px;margin:0 0 22px;white-space:pre-wrap}
     .like-panel{background:var(--pink);border:1px solid #f8d4e2;border-radius:14px;padding:16px;margin:20px 0}
@@ -101,6 +106,10 @@
       <div class="name-line">
         <h1 id="profileName">Member</h1>
         <span id="verifiedBadge" class="verified" hidden>✓ Verified</span>
+        <span id="profilePresence" class="presence offline" aria-live="polite">
+          <span class="presence-dot" aria-hidden="true"></span>
+          <span id="presenceText">Offline</span>
+        </span>
       </div>
       <p class="meta" id="profileMeta"></p>
       <p class="bio" id="profileBio"></p>
@@ -142,6 +151,82 @@
 
   const $ = (id) => document.getElementById(id);
   $("year").textContent = new Date().getFullYear();
+
+  let presenceChannel = null;
+  let presenceRefreshTimer = null;
+  let heartbeatTimer = null;
+  let viewedProfileId = null;
+  let currentUserId = null;
+  const ONLINE_WINDOW_MS = 90 * 1000;
+
+  function setPresence(isOnline, lastSeen) {
+    const badge = $("profilePresence");
+    const label = $("presenceText");
+    if (!badge || !label) return;
+    badge.classList.toggle("online", !!isOnline);
+    badge.classList.toggle("offline", !isOnline);
+    if (isOnline) {
+      label.textContent = "Online";
+      badge.title = "This member is currently online";
+    } else if (lastSeen) {
+      const date = new Date(lastSeen);
+      label.textContent = "Last seen " + date.toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+      badge.title = "Last active " + date.toLocaleString();
+    } else {
+      label.textContent = "Offline";
+      badge.title = "This member is currently offline";
+    }
+  }
+
+  async function refreshViewedPresence() {
+    if (!viewedProfileId) return;
+    const { data, error } = await supabase
+      .from("member_presence")
+      .select("last_seen")
+      .eq("user_id", viewedProfileId)
+      .maybeSingle();
+
+    if (error) {
+      console.warn("Could not load member presence. Check member_presence table and RLS:", error);
+      setPresence(false, null);
+      return;
+    }
+
+    const lastSeen = data?.last_seen || null;
+    const online = !!lastSeen && (Date.now() - new Date(lastSeen).getTime() <= ONLINE_WINDOW_MS);
+    setPresence(online, lastSeen);
+  }
+
+  async function sendPresenceHeartbeat() {
+    if (!currentUserId) return;
+    const { error } = await supabase
+      .from("member_presence")
+      .upsert({ user_id: currentUserId, last_seen: new Date().toISOString() }, { onConflict: "user_id" });
+    if (error) console.warn("Presence heartbeat failed. Check member_presence insert/update policies:", error);
+  }
+
+  async function startPresence(profileId, userId) {
+    viewedProfileId = profileId;
+    currentUserId = userId || null;
+
+    if (currentUserId) {
+      await sendPresenceHeartbeat();
+      heartbeatTimer = setInterval(sendPresenceHeartbeat, 30000);
+    }
+
+    await refreshViewedPresence();
+    presenceRefreshTimer = setInterval(refreshViewedPresence, 15000);
+
+    presenceChannel = supabase
+      .channel("view-profile-presence-" + profileId)
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "member_presence",
+        filter: "user_id=eq." + profileId
+      }, refreshViewedPresence)
+      .subscribe();
+  }
 
   function toList(value) {
     if (Array.isArray(value)) return value.filter(Boolean).map(String);
@@ -356,8 +441,16 @@
     }
 
     renderProfile(profile);
+    const { data: { user } } = await supabase.auth.getUser();
+    await startPresence(profile.id, user?.id || null);
     await Promise.all([setupLike(profile.id), setupMessage(profile.id)]);
   }
+
+  window.addEventListener("beforeunload", () => {
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
+    if (presenceRefreshTimer) clearInterval(presenceRefreshTimer);
+    if (presenceChannel) supabase.removeChannel(presenceChannel);
+  });
 
   loadProfile().catch(error => {
     console.error(error);

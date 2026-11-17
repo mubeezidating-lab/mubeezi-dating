@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -111,6 +110,40 @@
       color: #d81759;
       font-size: 18px;
       margin-bottom: 7px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .presence {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      color: #777;
+      font-size: 11px;
+      font-weight: normal;
+      white-space: nowrap;
+    }
+
+    .presence-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+      flex: 0 0 9px;
+      background: #9e9e9e;
+      box-shadow: 0 0 0 2px #eeeeee;
+    }
+
+    .presence.online .presence-dot {
+      background: #20b768;
+      box-shadow: 0 0 0 2px #d9f5e6;
+    }
+
+    .presence.offline .presence-dot {
+      background: #9e9e9e;
+      box-shadow: 0 0 0 2px #eeeeee;
     }
 
     .profile-location {
@@ -199,6 +232,7 @@
       .profile-info h2 { font-size: 15px; }
       .profile-bio { font-size: 12px; }
       .view-btn { font-size: 12px; padding: 10px 5px; }
+      .presence { font-size: 10px; }
     }
   </style>
 </head>
@@ -273,17 +307,21 @@
   const SUPABASE_URL = "https://xxtlcdvuiyrdufzvzeob.supabase.co";
   const SUPABASE_KEY = "sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU";
 
-  const db = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-  );
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const PAGE_SIZE = 20;
+  const PRESENCE_ONLINE_SECONDS = 90;
+  const PRESENCE_HEARTBEAT_MS = 30000;
+  const PRESENCE_REFRESH_MS = 15000;
 
   let allProfiles = [];
   let filteredProfiles = [];
   let currentPage = 0;
   let currentUserId = null;
+  let presenceByUser = {};
+  let presenceChannel = null;
+  let heartbeatTimer = null;
+  let presenceRefreshTimer = null;
 
   const grid = document.getElementById("profileGrid");
   const loadingState = document.getElementById("loadingState");
@@ -311,11 +349,95 @@
   }
 
   function getInterests(profile) {
-    if (Array.isArray(profile.interests)) {
-      return profile.interests.join(" ");
+    if (Array.isArray(profile.interests)) return profile.interests.join(" ");
+    return profile.interests || "";
+  }
+
+  function isOnline(lastSeen) {
+    if (!lastSeen) return false;
+    const timestamp = new Date(lastSeen).getTime();
+    if (!Number.isFinite(timestamp)) return false;
+    return (Date.now() - timestamp) <= PRESENCE_ONLINE_SECONDS * 1000;
+  }
+
+  function getPresenceMarkup(userId) {
+    const online = isOnline(presenceByUser[userId]);
+    const statusClass = online ? "online" : "offline";
+    const statusText = online ? "Online" : "Offline";
+
+    return `<span class="presence ${statusClass}" aria-label="${statusText}">
+      <span class="presence-dot"></span>${statusText}
+    </span>`;
+  }
+
+  async function updateMyPresence() {
+    if (!currentUserId) return;
+
+    const { error } = await db
+      .from("member_presence")
+      .upsert({
+        user_id: currentUserId,
+        last_seen: new Date().toISOString()
+      }, { onConflict: "user_id" });
+
+    if (error) console.warn("Presence heartbeat:", error.message);
+  }
+
+  async function loadPresence() {
+    const ids = allProfiles.map(profile => profile.id).filter(Boolean);
+
+    if (!ids.length) {
+      presenceByUser = {};
+      renderProfiles();
+      return;
     }
 
-    return profile.interests || "";
+    const { data, error } = await db
+      .from("member_presence")
+      .select("user_id,last_seen")
+      .in("user_id", ids);
+
+    if (error) {
+      console.warn("Could not load member presence:", error.message);
+      // Keep all members visible; show Offline when presence cannot be read.
+      presenceByUser = {};
+    } else {
+      presenceByUser = {};
+      (data || []).forEach(item => {
+        presenceByUser[item.user_id] = item.last_seen;
+      });
+    }
+
+    renderProfiles();
+  }
+
+  function startPresenceUpdates() {
+    if (!currentUserId) return;
+
+    updateMyPresence();
+    heartbeatTimer = setInterval(updateMyPresence, PRESENCE_HEARTBEAT_MS);
+    presenceRefreshTimer = setInterval(loadPresence, PRESENCE_REFRESH_MS);
+
+    if (presenceChannel) db.removeChannel(presenceChannel);
+
+    presenceChannel = db
+      .channel("discover-member-presence")
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "member_presence"
+      }, payload => {
+        const record = payload.new || payload.old;
+        if (record && record.user_id) {
+          if (payload.eventType === "DELETE") {
+            delete presenceByUser[record.user_id];
+          } else {
+            presenceByUser[record.user_id] = record.last_seen;
+          }
+          renderProfiles();
+        }
+      })
+      .subscribe();
   }
 
   async function loadAllProfiles() {
@@ -323,9 +445,7 @@
     errorState.style.display = "none";
 
     try {
-      const { data: sessionData, error: sessionError } =
-        await db.auth.getSession();
-
+      const { data: sessionData, error: sessionError } = await db.auth.getSession();
       if (sessionError) throw sessionError;
 
       currentUserId = sessionData.session?.user?.id || null;
@@ -358,28 +478,30 @@
           .range(from, from + batchSize - 1);
 
         if (error) throw error;
-
         if (!data || data.length === 0) break;
 
         profiles.push(...data);
-
         if (data.length < batchSize) break;
-
         from += batchSize;
       }
 
-      allProfiles = profiles.filter(
-        profile => profile.id !== currentUserId
-      );
+      // Exclude the signed-in member's own profile from discovery.
+      allProfiles = profiles.filter(profile => profile.id !== currentUserId);
 
       populateCountryFilter();
       applyFilters();
-
       loadingState.style.display = "none";
+
+      if (currentUserId) {
+        await loadPresence();
+        startPresenceUpdates();
+      } else {
+        presenceByUser = {};
+        renderProfiles();
+      }
 
     } catch (error) {
       console.error("Discover loading error:", error);
-
       showError(
         "We couldn't load member profiles. Please check your Supabase permissions and profiles table."
       );
@@ -388,15 +510,10 @@
 
   function populateCountryFilter() {
     const countries = [
-      ...new Set(
-        allProfiles
-          .map(profile => profile.country)
-          .filter(Boolean)
-      )
+      ...new Set(allProfiles.map(profile => profile.country).filter(Boolean))
     ].sort((a, b) => a.localeCompare(b));
 
-    countryFilter.innerHTML =
-      '<option value="">All Countries</option>';
+    countryFilter.innerHTML = '<option value="">All Countries</option>';
 
     countries.forEach(country => {
       const option = document.createElement("option");
@@ -411,11 +528,7 @@
     const country = countryFilter.value;
 
     filteredProfiles = allProfiles.filter(profile => {
-      const name =
-        profile.display_name ||
-        profile.full_name ||
-        "";
-
+      const name = profile.display_name || profile.full_name || "";
       const searchableText = [
         name,
         profile.country,
@@ -423,11 +536,8 @@
         getInterests(profile)
       ].join(" ").toLowerCase();
 
-      const matchesSearch = !search ||
-        searchableText.includes(search);
-
-      const matchesCountry = !country ||
-        profile.country === country;
+      const matchesSearch = !search || searchableText.includes(search);
+      const matchesCountry = !country || profile.country === country;
 
       return matchesSearch && matchesCountry;
     });
@@ -440,36 +550,22 @@
     grid.innerHTML = "";
 
     const start = currentPage * PAGE_SIZE;
-    const pageProfiles = filteredProfiles.slice(
-      start,
-      start + PAGE_SIZE
-    );
+    const pageProfiles = filteredProfiles.slice(start, start + PAGE_SIZE);
 
     document.getElementById("resultCount").textContent =
       `${filteredProfiles.length} member${filteredProfiles.length === 1 ? "" : "s"} found`;
 
-    emptyState.style.display =
-      filteredProfiles.length === 0 ? "block" : "none";
-
-    grid.style.display =
-      filteredProfiles.length === 0 ? "none" : "grid";
+    emptyState.style.display = filteredProfiles.length === 0 ? "block" : "none";
+    grid.style.display = filteredProfiles.length === 0 ? "none" : "grid";
 
     pageProfiles.forEach(profile => {
       const card = document.createElement("article");
       card.className = "profile-card";
 
-      const name = escapeHTML(
-        profile.display_name ||
-        profile.full_name ||
-        "Mubeezi Member"
-      );
-
-      const country = escapeHTML(profile.country || "Worldwide");
-      const age = profile.age ? `, ${escapeHTML(profile.age)}` : "";
-      const bio = escapeHTML(
-        profile.bio || "Discover this member and learn more about them."
-      );
-
+      const name = profile.display_name || profile.full_name || "Mubeezi Member";
+      const country = profile.country || "Worldwide";
+      const age = profile.age ? `, ${profile.age}` : "";
+      const bio = profile.bio || "Discover this member and learn more about them.";
       const photo = profile.profile_photo ||
         "https://placehold.co/400x400/fce4ec/e91e63?text=Mubeezi";
 
@@ -478,8 +574,7 @@
       image.alt = name + " profile picture";
       image.loading = "lazy";
       image.onerror = () => {
-        image.src =
-          "https://placehold.co/400x400/fce4ec/e91e63?text=Mubeezi";
+        image.src = "https://placehold.co/400x400/fce4ec/e91e63?text=Mubeezi";
       };
 
       const info = document.createElement("div");
@@ -487,6 +582,7 @@
 
       const title = document.createElement("h2");
       title.textContent = name + age;
+      title.insertAdjacentHTML("beforeend", getPresenceMarkup(profile.id));
 
       const location = document.createElement("p");
       location.className = "profile-location";
@@ -498,8 +594,7 @@
 
       const link = document.createElement("a");
       link.className = "view-btn";
-      link.href = "view-profile.html?id=" +
-        encodeURIComponent(profile.id);
+      link.href = "view-profile.html?id=" + encodeURIComponent(profile.id);
       link.textContent = "View Profile";
 
       info.append(title, location, description, link);
@@ -507,20 +602,12 @@
       grid.appendChild(card);
     });
 
-    const totalPages = Math.ceil(
-      filteredProfiles.length / PAGE_SIZE
-    );
-
+    const totalPages = Math.ceil(filteredProfiles.length / PAGE_SIZE);
     const pagination = document.getElementById("pagination");
 
-    pagination.style.display =
-      totalPages > 1 ? "flex" : "none";
-
-    document.getElementById("previousBtn").disabled =
-      currentPage === 0;
-
-    document.getElementById("nextBtn").disabled =
-      currentPage >= totalPages - 1;
+    pagination.style.display = totalPages > 1 ? "flex" : "none";
+    document.getElementById("previousBtn").disabled = currentPage === 0;
+    document.getElementById("nextBtn").disabled = currentPage >= totalPages - 1;
   }
 
   searchInput.addEventListener("input", applyFilters);
@@ -535,15 +622,18 @@
   });
 
   document.getElementById("nextBtn").addEventListener("click", () => {
-    const totalPages = Math.ceil(
-      filteredProfiles.length / PAGE_SIZE
-    );
-
+    const totalPages = Math.ceil(filteredProfiles.length / PAGE_SIZE);
     if (currentPage < totalPages - 1) {
       currentPage++;
       renderProfiles();
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
+  });
+
+  window.addEventListener("beforeunload", () => {
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
+    if (presenceRefreshTimer) clearInterval(presenceRefreshTimer);
+    if (presenceChannel) db.removeChannel(presenceChannel);
   });
 
   loadAllProfiles();

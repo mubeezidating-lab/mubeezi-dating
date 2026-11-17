@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -23,20 +22,23 @@
     .card { background: white; border-radius: 13px; overflow: hidden; box-shadow: 0 4px 16px rgba(80,20,40,.07); }
     .card img { display: block; width: 100%; height: 210px; object-fit: cover; background: #ffe1eb; }
     .info { padding: 14px; }
-    .info h2 { color: #d81759; font-size: 18px; margin-bottom: 7px; }
+    .info h2 { color: #d81759; font-size: 18px; margin-bottom: 7px; display:flex; align-items:center; flex-wrap:wrap; gap:7px; }
+    .presence { display:inline-flex; align-items:center; gap:5px; color:#777; font-size:11px; font-weight:normal; white-space:nowrap; }
+    .presence-dot { width:9px; height:9px; border-radius:50%; display:inline-block; flex:0 0 9px; background:#9e9e9e; box-shadow:0 0 0 2px #eee; }
+    .presence.online .presence-dot { background:#20b768; box-shadow:0 0 0 2px #d9f5e6; }
+    .presence.offline .presence-dot { background:#9e9e9e; box-shadow:0 0 0 2px #eee; }
     .location { color: #777; font-size: 13px; margin-bottom: 12px; }
     .actions { display: flex; gap: 8px; }
     .actions a, .actions button { flex: 1; text-align: center; border: 0; border-radius: 8px; padding: 11px 7px; font-weight: bold; font-size: 12px; text-decoration: none; cursor: pointer; }
     .view { background: #f4e8ed; color: #444; }
-    .like { background: #e91e63; color: white; }
-    .like:disabled { opacity: .6; cursor: not-allowed; }
+    .reply { background: #e91e63; color: white; }
     .state { background: white; padding: 30px 18px; border-radius: 12px; text-align: center; color: #777; line-height: 1.6; }
     .message { display: none; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 14px; }
     .error { background: #ffe9e9; color: #a00000; }
     .success { background: #e8f8ed; color: #176b32; }
     footer { text-align: center; color: #999; padding: 25px; font-size: 12px; }
     @media(max-width: 700px) { .grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; } .card img { height: 170px; } .info { padding: 10px; } .info h2 { font-size: 15px; } }
-    @media(max-width: 390px) { nav { justify-content: center; } header { justify-content: center; text-align: center; } .actions { flex-direction: column; } }
+    @media(max-width: 390px) { nav { justify-content: center; } header { justify-content: center; text-align: center; } .actions { flex-direction: column; } .presence { font-size:10px; } }
   </style>
 </head>
 <body>
@@ -87,7 +89,16 @@
   const messageBox = document.getElementById("message");
   const count = document.getElementById("count");
 
+  const ONLINE_WINDOW_MS = 90 * 1000;
+  const HEARTBEAT_MS = 30 * 1000;
+  const PRESENCE_REFRESH_MS = 15 * 1000;
+
   let currentUser = null;
+  let presenceByUser = {};
+  let presenceChannel = null;
+  let heartbeatTimer = null;
+  let presenceRefreshTimer = null;
+  let displayedProfileIds = [];
 
   function showMessage(text, type) {
     messageBox.textContent = text;
@@ -95,13 +106,94 @@
     messageBox.style.display = "block";
   }
 
+  function memberIsOnline(userId) {
+    const lastSeen = presenceByUser[userId];
+    if (!lastSeen) return false;
+    const timestamp = new Date(lastSeen).getTime();
+    return Number.isFinite(timestamp) && Date.now() - timestamp <= ONLINE_WINDOW_MS;
+  }
+
+  function presenceMarkup(userId) {
+    const online = memberIsOnline(userId);
+    return `<span class="presence ${online ? "online" : "offline"}">
+      <span class="presence-dot"></span>${online ? "Online" : "Offline"}
+    </span>`;
+  }
+
+  async function updateMyPresence() {
+    if (!currentUser?.id) return;
+    const { error } = await db.from("member_presence").upsert({
+      user_id: currentUser.id,
+      last_seen: new Date().toISOString()
+    }, { onConflict: "user_id" });
+
+    if (error) console.warn("Presence heartbeat:", error.message);
+  }
+
+  async function refreshPresence() {
+    if (!displayedProfileIds.length) {
+      presenceByUser = {};
+      renderPresenceLabels();
+      return;
+    }
+
+    const { data, error } = await db
+      .from("member_presence")
+      .select("user_id,last_seen")
+      .in("user_id", displayedProfileIds);
+
+    if (error) {
+      console.warn("Could not load member presence:", error.message);
+      // Keep the likes list visible; status defaults to Offline if presence is unavailable.
+      presenceByUser = {};
+    } else {
+      presenceByUser = {};
+      (data || []).forEach(row => {
+        presenceByUser[row.user_id] = row.last_seen;
+      });
+    }
+    renderPresenceLabels();
+  }
+
+  function renderPresenceLabels() {
+    grid.querySelectorAll("[data-presence-for]").forEach(element => {
+      element.innerHTML = presenceMarkup(element.dataset.presenceFor);
+    });
+  }
+
+  function startPresenceUpdates() {
+    if (!currentUser?.id) return;
+
+    updateMyPresence();
+    heartbeatTimer = setInterval(updateMyPresence, HEARTBEAT_MS);
+    presenceRefreshTimer = setInterval(refreshPresence, PRESENCE_REFRESH_MS);
+
+    presenceChannel = db
+      .channel("likes-member-presence")
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "member_presence"
+      }, payload => {
+        const row = payload.new || payload.old;
+        if (!row?.user_id) return;
+
+        if (payload.eventType === "DELETE") {
+          delete presenceByUser[row.user_id];
+        } else {
+          presenceByUser[row.user_id] = row.last_seen;
+        }
+        renderPresenceLabels();
+      })
+      .subscribe();
+  }
+
   async function loadLikes() {
     try {
-      const { data: sessionData, error: sessionError } =
-        await db.auth.getSession();
+      const { data: sessionData, error: sessionError } = await db.auth.getSession();
       if (sessionError) throw sessionError;
 
-      currentUser = sessionData.session?.user;
+      currentUser = sessionData.session?.user || null;
       if (!currentUser) {
         location.href = "login.html?next=likes.html";
         return;
@@ -116,15 +208,14 @@
       if (likesError) throw likesError;
 
       const uniqueIds = [...new Set(
-        (likes || [])
-          .map(item => item.liker_id)
-          .filter(id => id && id !== currentUser.id)
+        (likes || []).map(item => item.liker_id).filter(id => id && id !== currentUser.id)
       )];
 
       if (!uniqueIds.length) {
         loading.style.display = "none";
         empty.style.display = "block";
         count.textContent = "0 members like you";
+        startPresenceUpdates();
         return;
       }
 
@@ -132,7 +223,9 @@
       const { data: profiles, error: profilesError } = await db
         .from("profiles")
         .select("id, display_name, full_name, username, age, country, profile_photo")
-        .in("id", uniqueIds);
+        .in("id", uniqueIds)
+        .eq("profile_visible", true)
+        .eq("is_active", true);
 
       if (profilesError) throw profilesError;
 
@@ -140,7 +233,10 @@
       const visibleIds = new Set(visibleProfiles.map(p => p.id));
 
       // Remove likes whose senders are no longer discoverable.
-      const displayedLikes = (likes || []).filter((like, index, all) => visibleIds.has(like.liker_id) && all.findIndex(x => x.liker_id === like.liker_id) === index);
+      const displayedLikes = (likes || []).filter((like, index, all) =>
+        visibleIds.has(like.liker_id) &&
+        all.findIndex(item => item.liker_id === like.liker_id) === index
+      );
 
       count.textContent =
         `${displayedLikes.length} member${displayedLikes.length === 1 ? "" : "s"} like you`;
@@ -148,12 +244,12 @@
       if (!displayedLikes.length) {
         loading.style.display = "none";
         empty.style.display = "block";
+        startPresenceUpdates();
         return;
       }
 
-      const profileMap = new Map(
-        visibleProfiles.map(profile => [profile.id, profile])
-      );
+      const profileMap = new Map(visibleProfiles.map(profile => [profile.id, profile]));
+      displayedProfileIds = displayedLikes.map(like => like.liker_id);
 
       displayedLikes.forEach(like => {
         const profile = profileMap.get(like.liker_id);
@@ -178,6 +274,11 @@
         title.textContent =
           (profile.display_name || profile.full_name || "Mubeezi Member") +
           (profile.age ? ", " + profile.age : "");
+
+        const presence = document.createElement("span");
+        presence.dataset.presenceFor = profile.id;
+        presence.innerHTML = presenceMarkup(profile.id);
+        title.appendChild(presence);
 
         const locationText = document.createElement("p");
         locationText.className = "location";
@@ -205,6 +306,9 @@
       loading.style.display = "none";
       if (!grid.children.length) empty.style.display = "block";
 
+      await refreshPresence();
+      startPresenceUpdates();
+
     } catch (error) {
       console.error("Likes page error:", error);
       loading.style.display = "none";
@@ -215,6 +319,12 @@
       errorBox.style.display = "block";
     }
   }
+
+  window.addEventListener("beforeunload", () => {
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
+    if (presenceRefreshTimer) clearInterval(presenceRefreshTimer);
+    if (presenceChannel) db.removeChannel(presenceChannel);
+  });
 
   loadLikes();
 </script>

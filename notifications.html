@@ -19,6 +19,11 @@ nav a{display:inline-block;margin:5px 9px;color:#d81b60;text-decoration:none;fon
 .notification h3{margin:0 0 7px;color:#c2185b;font-size:17px}
 .notification p{margin:0;color:#555;line-height:1.5;overflow-wrap:anywhere}
 .notification small{display:block;margin-top:10px;color:#999}
+.presence{display:inline-flex;align-items:center;gap:6px;margin-top:9px;padding:4px 9px;border-radius:20px;background:#f7f4f6;border:1px solid #eee5e9;color:#77717a;font-size:12px;font-weight:bold;cursor:default}
+.presence-dot{width:9px;height:9px;border-radius:50%;background:#99939a;display:inline-block;flex:0 0 9px}
+.presence.online{background:#e9f8ef;border-color:#c9ecd5;color:#16834b}
+.presence.online .presence-dot{background:#20ad5b;box-shadow:0 0 0 3px #20ad5b20}
+.presence.offline .presence-dot{background:#99939a}
 .actions{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:15px}
 button{background:#e91e63;color:white;border:0;border-radius:20px;padding:10px 17px;cursor:pointer;font-weight:bold}
 button:disabled{opacity:.5;cursor:not-allowed}
@@ -57,7 +62,9 @@ const markAllButton=document.getElementById("markAllButton");
 const enableAlertsButton=document.getElementById("enableAlertsButton");
 const connectionStatus=document.getElementById("connectionStatus");
 let currentUser=null, notificationChannel=null, alertsEnabled=false, audioContext=null, refreshTimer=null;
+let heartbeatTimer=null,presenceRefreshTimer=null,presenceChannel=null;
 const knownNotificationIds=new Set();
+const ONLINE_WINDOW_MS=90*1000;
 
 function escapeHTML(value){
  return String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[char]));
@@ -115,6 +122,51 @@ async function enableAlerts(){
  }catch(error){console.error(error);alert("Your browser did not enable alerts. Check this site's sound and notification permissions.");}
 }
 function destination(notification){return notification.data&&notification.data.chat_url?notification.data.chat_url:"";}
+
+/* Notification actor IDs can be stored in different fields depending on
+   the event that created the notification. The recipient user_id is excluded. */
+function getActorId(notification){
+ const extra=notification.data&&typeof notification.data==="object"?notification.data:{};
+ const candidates=[
+  notification.actor_id,notification.sender_id,notification.from_user_id,
+  notification.profile_id,notification.liker_id,notification.member_id,
+  extra.actor_id,extra.sender_id,extra.from_user_id,extra.profile_id,
+  extra.liker_id,extra.member_id,extra.user_id
+ ];
+ return candidates.find(id=>typeof id==="string"&&id&&id!==currentUser?.id)||null;
+}
+function presenceMarkup(actorId){
+ if(!actorId)return "";
+ return `<span class="presence offline" data-presence-user="${escapeHTML(actorId)}"><span class="presence-dot" aria-hidden="true"></span><span class="presence-label">Offline</span></span>`;
+}
+function applyPresenceToCards(rows){
+ const now=Date.now();
+ document.querySelectorAll("[data-presence-user]").forEach(badge=>{
+  const id=badge.dataset.presenceUser;
+  const record=rows.find(row=>row.user_id===id);
+  const lastSeen=record?.last_seen||null;
+  const online=!!lastSeen&&(now-new Date(lastSeen).getTime()<=ONLINE_WINDOW_MS);
+  badge.classList.toggle("online",online);
+  badge.classList.toggle("offline",!online);
+  const label=badge.querySelector(".presence-label");
+  if(label)label.textContent=online?"Online":lastSeen?"Last seen "+formatDate(lastSeen):"Offline";
+  badge.title=online?"This member is currently online":lastSeen?"Last active "+formatDate(lastSeen):"This member is currently offline";
+ });
+}
+async function refreshNotificationPresence(){
+ const ids=[...new Set([...document.querySelectorAll("[data-presence-user]")].map(el=>el.dataset.presenceUser).filter(Boolean))];
+ if(!ids.length)return;
+ const {data,error}=await db.from("member_presence").select("user_id,last_seen").in("user_id",ids);
+ if(error){console.warn("Could not load notification member presence. Check member_presence table and RLS:",error);return;}
+ applyPresenceToCards(data||[]);
+}
+async function sendPresenceHeartbeat(){
+ if(!currentUser)return;
+ const {error}=await db.from("member_presence").upsert(
+  {user_id:currentUser.id,last_seen:new Date().toISOString()},{onConflict:"user_id"}
+ );
+ if(error)console.warn("Presence heartbeat failed. Check member_presence insert/update policies:",error);
+}
 async function markOneAsRead(id){
  const {error}=await db.from("notifications").update({is_read:true}).eq("id",id).eq("user_id",currentUser.id);
  if(error)console.warn("Could not mark notification as read:",error);
@@ -123,12 +175,14 @@ function renderNotification(notification){
  if(!notification||!notification.id)return;
  knownNotificationIds.add(notification.id);
  const old=document.getElementById("notification-"+notification.id);if(old)old.remove();
+ const actorId=getActorId(notification);
  const item=document.createElement("div");
  item.id="notification-"+notification.id;
  item.className="notification "+(notification.is_read?"":"unread");
  item.setAttribute("role","button");item.setAttribute("tabindex","0");
  item.innerHTML=`<h3>${escapeHTML(notification.title||"Mubeezi Dating")}</h3>
  <p>${escapeHTML(notification.body||"")}</p>
+ ${presenceMarkup(actorId)}
  <small>${escapeHTML(notification.type||"Update")} · ${escapeHTML(formatDate(notification.created_at))}
  ${notification.is_read?" · Read":" · Unread"}${destination(notification)?" · Open conversation":""}</small>`;
  const openItem=async()=>{
@@ -152,6 +206,7 @@ async function loadNotifications(){
   list.innerHTML="";knownNotificationIds.clear();
   if(!data||data.length===0){showStatus("You don't have any notifications yet.");markAllButton.disabled=true;return;}
   statusBox.style.display="none";markAllButton.disabled=false;data.forEach(renderNotification);
+  await refreshNotificationPresence();
  }catch(error){
   console.error("Notifications error:",error);
   showStatus("Notifications could not be loaded: "+(error.message||error.details||String(error)),true);
@@ -164,6 +219,7 @@ function subscribeToNotifications(){
    const notification=payload.new;
    if(!notification||knownNotificationIds.has(notification.id))return;
    renderNotification(notification);statusBox.style.display="none";markAllButton.disabled=false;
+   refreshNotificationPresence();
    playNotificationSound();showDesktopNotification(notification);
   })
   .subscribe(state=>{
@@ -171,6 +227,12 @@ function subscribeToNotifications(){
    else if(state==="CHANNEL_ERROR"||state==="TIMED_OUT")setConnection("Live connection interrupted. Trying to reconnect…","offline");
    else if(state==="CLOSED")setConnection("Live notifications disconnected.","offline");
   });
+}
+function subscribeToPresence(){
+ if(presenceChannel)db.removeChannel(presenceChannel);
+ presenceChannel=db.channel("notification-member-presence-"+currentUser.id)
+  .on("postgres_changes",{event:"*",schema:"public",table:"member_presence"},()=>refreshNotificationPresence())
+  .subscribe();
 }
 markAllButton.addEventListener("click",async()=>{
  if(!currentUser)return;markAllButton.disabled=true;
@@ -186,16 +248,22 @@ async function start(){
   const {data,error}=await db.auth.getSession();if(error)throw error;
   currentUser=data.session&&data.session.user;
   if(!currentUser){window.location.href="login.html?next=notifications.html";return;}
+  await sendPresenceHeartbeat();
+  heartbeatTimer=setInterval(sendPresenceHeartbeat,30000);
   await loadNotifications();
   subscribeToNotifications();
-  // Refresh periodically even when Supabase Realtime is not enabled.
+  subscribeToPresence();
   if(refreshTimer)clearInterval(refreshTimer);
   refreshTimer=setInterval(()=>loadNotifications(),10000);
+  presenceRefreshTimer=setInterval(refreshNotificationPresence,15000);
  }catch(error){console.error(error);showStatus("Please sign in to view your notifications.",true);}
 }
 window.addEventListener("beforeunload",()=>{
  if(notificationChannel)db.removeChannel(notificationChannel);
+ if(presenceChannel)db.removeChannel(presenceChannel);
  if(refreshTimer)clearInterval(refreshTimer);
+ if(heartbeatTimer)clearInterval(heartbeatTimer);
+ if(presenceRefreshTimer)clearInterval(presenceRefreshTimer);
 });
 start();
 </script>

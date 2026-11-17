@@ -23,7 +23,7 @@ nav a{display:inline-block;margin:5px 9px;color:#d81b60;text-decoration:none;fon
 .bubble{max-width:78%;padding:11px 14px;margin:10px 0;border-radius:15px;overflow-wrap:anywhere;white-space:pre-wrap}
 .sent{background:#f8bbd0;margin-left:auto;border-bottom-right-radius:4px}
 .received{background:#f1f1f1;margin-right:auto;border-bottom-left-radius:4px}
-.time{display:block;font-size:10px;color:#777;margin-top:6px;text-align:right}
+.time{display:block;font-size:10px;color:#777;margin-top:6px;text-align:right}.receipt{display:inline-block;margin-left:5px;font-size:13px;font-weight:700;letter-spacing:-3px}.receipt.unread{color:#888}.receipt.read{color:#168bfa}.member-presence{display:flex;align-items:center;gap:7px;margin-top:6px;color:#777;font-size:12px}.presence-dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:#9ca3af;flex:0 0 9px}.presence-dot.online{background:#16a34a;box-shadow:0 0 0 3px #16a34a20}
 .composer{display:flex;gap:9px;padding:14px;border-top:1px solid #eee}
 textarea{flex:1;resize:none;min-height:45px;max-height:120px;border:1px solid #ddd;border-radius:12px;padding:12px;font-family:inherit;font-size:16px}
 button{border:0;border-radius:22px;padding:0 22px;background:#e91e63;color:white;font-weight:bold;cursor:pointer}
@@ -58,7 +58,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 <div class="panel">
 <div class="top">
 <h2>💬 Messages</h2>
-<div id="conversationTitle">Choose a member to start a conversation.</div>
+<div id="conversationTitle">Choose a member to start a conversation.</div><div id="memberPresence" class="member-presence" hidden><span id="presenceDot" class="presence-dot"></span><span id="presenceText">Offline</span></div>
 </div>
 
 <div id="status" class="status">Loading messages...</div>
@@ -88,6 +88,9 @@ const chatBox = document.getElementById("chat");
 const input = document.getElementById("messageInput");
 const sendButton = document.getElementById("sendButton");
 const titleBox = document.getElementById("conversationTitle");
+const memberPresence = document.getElementById("memberPresence");
+const presenceDot = document.getElementById("presenceDot");
+const presenceText = document.getElementById("presenceText");
 const upgradePanel = document.getElementById("upgradePanel");
 const limitNotice = document.getElementById("limitNotice");
 
@@ -98,6 +101,9 @@ let refreshTimer = null;
 let isPremium = false;
 let sentMessageCount = 0;
 let freeLimitReached = false;
+let presenceChannel = null;
+let presenceTimer = null;
+const ONLINE_WINDOW_MS = 90000;
 
 function showStatus(message, error = false) {
     statusBox.textContent = message;
@@ -168,6 +174,62 @@ async function checkMembershipAndMessageCount() {
     else hideUpgrade();
 }
 
+
+function presenceLabel(lastSeen) {
+    if (!lastSeen) return "Offline";
+    const age = Date.now() - new Date(lastSeen).getTime();
+    if (!Number.isFinite(age) || age > ONLINE_WINDOW_MS) {
+        if (!lastSeen || !Number.isFinite(age)) return "Offline";
+        const minutes = Math.max(1, Math.floor(age / 60000));
+        if (minutes < 60) return "Last seen " + minutes + (minutes === 1 ? " minute ago" : " minutes ago");
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return "Last seen " + hours + (hours === 1 ? " hour ago" : " hours ago");
+        const days = Math.floor(hours / 24);
+        return "Last seen " + days + (days === 1 ? " day ago" : " days ago");
+    }
+    return "Online";
+}
+
+function renderPresence(lastSeen) {
+    const label = presenceLabel(lastSeen);
+    memberPresence.hidden = false;
+    presenceText.textContent = label;
+    presenceDot.classList.toggle("online", label === "Online");
+}
+
+async function refreshOtherPresence() {
+    if (!otherUserId) return;
+    const { data, error } = await db.from("member_presence")
+        .select("last_seen").eq("user_id", otherUserId).maybeSingle();
+    if (error) {
+        console.warn("Presence lookup:", error.message);
+        renderPresence(null);
+        return;
+    }
+    renderPresence(data?.last_seen || null);
+}
+
+async function sendPresenceHeartbeat() {
+    if (!currentUser) return;
+    const { error } = await db.from("member_presence").upsert({
+        user_id: currentUser.id,
+        last_seen: new Date().toISOString()
+    }, { onConflict: "user_id" });
+    if (error) console.warn("Presence heartbeat:", error.message);
+}
+
+async function markIncomingMessagesRead(messages) {
+    const unreadIds = (messages || [])
+        .filter(m => m.recipient_id === currentUser.id && m.is_read === false)
+        .map(m => m.id);
+    if (!unreadIds.length) return;
+    const { error } = await db.from("messages")
+        .update({ is_read: true })
+        .in("id", unreadIds)
+        .eq("recipient_id", currentUser.id);
+    if (error) console.warn("Could not mark messages as read:", error.message);
+}
+
 async function loadConversation() {
     if (!otherUserId) {
         showStatus("Open a member's profile and select Message to start a conversation.");
@@ -187,15 +249,17 @@ async function loadConversation() {
 
         otherUserName = profile?.display_name || profile?.full_name || "Member";
         titleBox.textContent = "Conversation with " + otherUserName;
+        await refreshOtherPresence();
 
         const { data: messages, error } = await db
             .from("messages")
-            .select("id,sender_id,recipient_id,content,created_at")
+            .select("id,sender_id,recipient_id,content,created_at,is_read")
             .or(`and(sender_id.eq.${currentUser.id},recipient_id.eq.${otherUserId}),and(sender_id.eq.${otherUserId},recipient_id.eq.${currentUser.id})`)
             .order("created_at", { ascending: true });
 
         if (error) throw error;
 
+        await markIncomingMessagesRead(messages);
         chatBox.innerHTML = "";
 
         if (!messages || messages.length === 0) {
@@ -206,7 +270,7 @@ async function loadConversation() {
                 const isMine = message.sender_id === currentUser.id;
                 const bubble = document.createElement("div");
                 bubble.className = "bubble " + (isMine ? "sent" : "received");
-                bubble.innerHTML = `${escapeHTML(message.content)}<span class="time">${escapeHTML(formatTime(message.created_at))}</span>`;
+                bubble.innerHTML = `${escapeHTML(message.content)}<span class="time">${escapeHTML(formatTime(message.created_at))}${isMine ? `<span class="receipt ${message.is_read ? "read" : "unread"}" aria-label="${message.is_read ? "Read" : "Sent, not read"}">${message.is_read ? "✓✓" : "✓"}</span>` : ""}</span>`;
                 chatBox.appendChild(bubble);
             });
         }
@@ -302,8 +366,14 @@ async function start() {
             return;
         }
 
+        await sendPresenceHeartbeat();
         await loadConversation();
-        refreshTimer = setInterval(loadConversation, 10000);
+        refreshTimer = setInterval(() => { loadConversation().catch(console.warn); }, 8000);
+        presenceTimer = setInterval(sendPresenceHeartbeat, 30000);
+        presenceChannel = db.channel("conversation-presence-" + currentUser.id + "-" + otherUserId)
+            .on("postgres_changes", { event: "*", schema: "public", table: "member_presence", filter: "user_id=eq." + otherUserId }, refreshOtherPresence)
+            .on("postgres_changes", { event: "UPDATE", schema: "public", table: "messages", filter: "sender_id=eq." + currentUser.id }, () => loadConversation().catch(console.warn))
+            .subscribe();
 
     } catch (error) {
         console.error(error);
@@ -313,6 +383,8 @@ async function start() {
 
 window.addEventListener("beforeunload", () => {
     if (refreshTimer) clearInterval(refreshTimer);
+    if (presenceTimer) clearInterval(presenceTimer);
+    if (presenceChannel) db.removeChannel(presenceChannel);
 });
 
 start();

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -23,7 +22,11 @@ nav a{display:inline-block;margin:5px 9px;color:#d81b60;text-decoration:none;fon
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px}
 .card{background:white;border-radius:14px;overflow:hidden;box-shadow:0 3px 12px #00000012;text-align:center;padding-bottom:17px}
 .card img{width:100%;height:230px;object-fit:cover;background:#ffe0e8}
-.card h3{margin:13px 5px 5px;color:#c2185b}
+.card h3{margin:13px 5px 5px;color:#c2185b;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:7px}
+.presence{display:inline-flex;align-items:center;gap:5px;color:#777;font-size:11px;font-weight:normal;white-space:nowrap}
+.presence-dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:0 0 9px;background:#9e9e9e;box-shadow:0 0 0 2px #eee}
+.presence.online .presence-dot{background:#20b768;box-shadow:0 0 0 2px #d9f5e6}
+.presence.offline .presence-dot{background:#9e9e9e;box-shadow:0 0 0 2px #eee}
 .card p{margin:5px;color:#777;font-size:14px}
 .actions{display:flex;justify-content:center;gap:9px;margin-top:15px;flex-wrap:wrap}
 .btn{border:0;border-radius:20px;padding:10px 17px;text-decoration:none;font-weight:bold;cursor:pointer;font-size:13px}
@@ -32,7 +35,7 @@ nav a{display:inline-block;margin:5px 9px;color:#d81b60;text-decoration:none;fon
 .empty,.status{background:white;text-align:center;padding:25px;border-radius:12px;color:#777}
 .error{color:#c62828}
 .hidden{display:none}
-@media(max-width:500px){.container{padding:10px}.card img{height:210px}}
+@media(max-width:500px){.container{padding:10px}.card img{height:210px}.presence{font-size:10px}}
 </style>
 </head>
 
@@ -68,15 +71,21 @@ nav a{display:inline-block;margin:5px 9px;color:#d81b60;text-decoration:none;fon
 const SUPABASE_URL = "https://xxtlcdvuiyrdufzvzeob.supabase.co";
 const SUPABASE_KEY = "sb_publishable_KOs2uLOuyzOVLhg9H5gJJw_1pUYvlsU";
 
-const db = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-);
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const statusBox = document.getElementById("status");
 const matchesBox = document.getElementById("matches");
 
+const ONLINE_WINDOW_MS = 90 * 1000;
+const HEARTBEAT_MS = 30 * 1000;
+const PRESENCE_REFRESH_MS = 15 * 1000;
+
 let currentUser = null;
+let presenceByUser = {};
+let matchedProfileIds = [];
+let presenceChannel = null;
+let heartbeatTimer = null;
+let presenceRefreshTimer = null;
 
 function showStatus(message, isError = false) {
     statusBox.textContent = message;
@@ -114,6 +123,90 @@ function getAge(profile) {
     return "";
 }
 
+function isOnline(userId) {
+    const lastSeen = presenceByUser[userId];
+    if (!lastSeen) return false;
+    const timestamp = new Date(lastSeen).getTime();
+    return Number.isFinite(timestamp) && Date.now() - timestamp <= ONLINE_WINDOW_MS;
+}
+
+function presenceMarkup(userId) {
+    const online = isOnline(userId);
+    return `<span class="presence ${online ? "online" : "offline"}">
+        <span class="presence-dot"></span>${online ? "Online" : "Offline"}
+    </span>`;
+}
+
+async function updateMyPresence() {
+    if (!currentUser?.id) return;
+
+    const { error } = await db.from("member_presence").upsert({
+        user_id: currentUser.id,
+        last_seen: new Date().toISOString()
+    }, { onConflict: "user_id" });
+
+    if (error) console.warn("Presence heartbeat:", error.message);
+}
+
+async function refreshPresence() {
+    if (!matchedProfileIds.length) {
+        presenceByUser = {};
+        updatePresenceLabels();
+        return;
+    }
+
+    const { data, error } = await db
+        .from("member_presence")
+        .select("user_id,last_seen")
+        .in("user_id", matchedProfileIds);
+
+    if (error) {
+        console.warn("Could not load match presence:", error.message);
+        // Match cards remain visible even if presence permissions are unavailable.
+        presenceByUser = {};
+    } else {
+        presenceByUser = {};
+        (data || []).forEach(row => {
+            presenceByUser[row.user_id] = row.last_seen;
+        });
+    }
+
+    updatePresenceLabels();
+}
+
+function updatePresenceLabels() {
+    matchesBox.querySelectorAll("[data-presence-for]").forEach(element => {
+        element.innerHTML = presenceMarkup(element.dataset.presenceFor);
+    });
+}
+
+function startPresenceUpdates() {
+    if (!currentUser?.id) return;
+
+    updateMyPresence();
+    heartbeatTimer = setInterval(updateMyPresence, HEARTBEAT_MS);
+    presenceRefreshTimer = setInterval(refreshPresence, PRESENCE_REFRESH_MS);
+
+    presenceChannel = db
+        .channel("matches-member-presence")
+        .on("postgres_changes", {
+            event: "*",
+            schema: "public",
+            table: "member_presence"
+        }, payload => {
+            const row = payload.new || payload.old;
+            if (!row?.user_id) return;
+
+            if (payload.eventType === "DELETE") {
+                delete presenceByUser[row.user_id];
+            } else {
+                presenceByUser[row.user_id] = row.last_seen;
+            }
+            updatePresenceLabels();
+        })
+        .subscribe();
+}
+
 async function loadMatches() {
     try {
         const { data: sessionData, error: sessionError } =
@@ -124,25 +217,23 @@ async function loadMatches() {
         currentUser = sessionData.session?.user;
 
         if (!currentUser) {
-            window.location.href = "login.html";
+            window.location.href = "login.html?next=matches.html";
             return;
         }
 
         // Get people this member has liked.
-        const { data: outgoingLikes, error: outgoingError } =
-            await db
-                .from("profile_likes")
-                .select("liked_id")
-                .eq("liker_id", currentUser.id);
+        const { data: outgoingLikes, error: outgoingError } = await db
+            .from("profile_likes")
+            .select("liked_id")
+            .eq("liker_id", currentUser.id);
 
         if (outgoingError) throw outgoingError;
 
         // Get people who have liked this member.
-        const { data: incomingLikes, error: incomingError } =
-            await db
-                .from("profile_likes")
-                .select("liker_id")
-                .eq("liked_id", currentUser.id);
+        const { data: incomingLikes, error: incomingError } = await db
+            .from("profile_likes")
+            .select("liker_id")
+            .eq("liked_id", currentUser.id);
 
         if (incomingError) throw incomingError;
 
@@ -161,29 +252,33 @@ async function loadMatches() {
         if (mutualIds.length === 0) {
             matchesBox.innerHTML = "";
             showStatus("You don't have any matches yet. Visit Discover and like someone to get started.");
+            matchedProfileIds = [];
+            startPresenceUpdates();
             return;
         }
 
         // Load only profiles that are visible and active.
-        const { data: profiles, error: profilesError } =
-            await db
-                .from("profiles")
-                .select("id,display_name,full_name,age,date_of_birth,country,profile_photo")
-                .in("id", mutualIds)
-                .eq("profile_visible", true)
-                .eq("is_active", true)
-                .eq("profile_completed", true);
+        const { data: profiles, error: profilesError } = await db
+            .from("profiles")
+            .select("id,display_name,full_name,age,date_of_birth,country,profile_photo")
+            .in("id", mutualIds)
+            .eq("profile_visible", true)
+            .eq("is_active", true)
+            .eq("profile_completed", true);
 
         if (profilesError) throw profilesError;
 
         matchesBox.innerHTML = "";
 
         if (!profiles || profiles.length === 0) {
+            matchedProfileIds = [];
             showStatus("Your matches could not be displayed. Some profiles may no longer be visible.");
+            startPresenceUpdates();
             return;
         }
 
         statusBox.classList.add("hidden");
+        matchedProfileIds = profiles.map(profile => profile.id);
 
         profiles.forEach(profile => {
             const name = profile.display_name ||
@@ -198,32 +293,50 @@ async function loadMatches() {
             const card = document.createElement("article");
             card.className = "card";
 
-            card.innerHTML = `
-                <img src="${escapeHTML(photo)}"
-                     alt="Profile photo"
-                     onerror="this.onerror=null;this.src='https://placehold.co/500x500/fce4ec/c2185b?text=Mubeezi'">
+            const image = document.createElement("img");
+            image.src = photo;
+            image.alt = name + " profile photo";
+            image.loading = "lazy";
+            image.onerror = () => {
+                image.src = "https://placehold.co/500x500/fce4ec/c2185b?text=Mubeezi";
+            };
 
-                <h3>${escapeHTML(name)}</h3>
-                <p>${age ? escapeHTML(age) + " years old" : "Age not provided"}</p>
-                <p>${escapeHTML(country)}</p>
+            const title = document.createElement("h3");
+            title.textContent = name;
 
-                <div class="actions">
-                    <a class="btn view"
-                       href="view-profile.html?id=${encodeURIComponent(profile.id)}">
-                       View Profile
-                    </a>
+            const presence = document.createElement("span");
+            presence.dataset.presenceFor = profile.id;
+            presence.innerHTML = presenceMarkup(profile.id);
+            title.appendChild(presence);
 
-                    <a class="btn message"
-                       href="messages.html?user=${encodeURIComponent(profile.id)}">
-                       Message
-                    </a>
-                </div>
-            `;
+            const ageLine = document.createElement("p");
+            ageLine.textContent = age ? age + " years old" : "Age not provided";
 
+            const countryLine = document.createElement("p");
+            countryLine.textContent = country;
+
+            const actions = document.createElement("div");
+            actions.className = "actions";
+
+            const view = document.createElement("a");
+            view.className = "btn view";
+            view.href = "view-profile.html?id=" + encodeURIComponent(profile.id);
+            view.textContent = "View Profile";
+
+            const message = document.createElement("a");
+            message.className = "btn message";
+            message.href = "messages.html?user=" + encodeURIComponent(profile.id);
+            message.textContent = "Message";
+
+            actions.append(view, message);
+            card.append(image, title, ageLine, countryLine, actions);
             matchesBox.appendChild(card);
         });
 
         showStatus(`You have ${profiles.length} mutual match${profiles.length === 1 ? "" : "es"}! ❤️`);
+
+        await refreshPresence();
+        startPresenceUpdates();
 
     } catch (error) {
         console.error("Matches loading error:", error);
@@ -234,6 +347,12 @@ async function loadMatches() {
         );
     }
 }
+
+window.addEventListener("beforeunload", () => {
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
+    if (presenceRefreshTimer) clearInterval(presenceRefreshTimer);
+    if (presenceChannel) db.removeChannel(presenceChannel);
+});
 
 loadMatches();
 </script>
